@@ -1,64 +1,25 @@
 options: -s
 
 define
-	album		"Nobelia"
-	publisher	"JEFFREY JANSSEN"
-	preparer	"JEFFREY JANSSEN"
+	album		"FMVTest"
+	publisher	"ANDRE ZEPS"
+	preparer	"ANDRE ZEPS"
 
-	volume	"Nobelia"	in	"DISK/NOBELIA.CDI"
+	volume	"FMVTest"	in	"DISK/FMVTEST.CDI"
 
 	copyright	file	Copyright	from "BUILD/COPYRGHT.TXT"
 	abstract	file	Abstract	from "BUILD/ABSTRACT.TXT"
 	biblio		file	Biblio		from "BUILD/BIBLIOGR.TXT"
 	message							from "BUILD/MESSAGE.TXT"
 
-	application file	Nobelia     from "BUILD/NOBELIA"
-
-	yellow      file    PlaneAPal   from "BUILD/PLANE_A.PAL"
-	yellow      file    PlaneBPal   from "BUILD/PLANE_B.PAL"
-
-	green       file    WorldRtf    from record data in channel 0 from
-	                                     "BUILD/WORLD.NBL"
-
-	green       file    IntroRtf    from record data in channel 0 from
-	                                     "BUILD/TWBURN.BIN"
-
-	green       file    GameRtf     from record data in channel 0 from
-										 "BUILD/TILES.BIN",
-										 "BUILD/SPRITES.BIN",
-										 "BUILD/INSTRUCT.BIN",
-										 "BUILD/DISCERR.BIN",
-										 "BUILD/SFX.BIN"
-
-	green       file    TitleRtf    from record data in channel 0 from
-										 "BUILD/TITLE.BIN",
-										 "BUILD/PAPER.BIN"
-
-	green       file    ScoreRtf    from record data in channel 0 from
-										 "BUILD/SCORE.BIN"
-
-	green       file    MusicRtf    from record real_time audio in channel 0 from "BUILD/M00_GWLD.ACM">
-	                                            real_time audio in channel 1 from "BUILD/M01_TRAV.ACM">
-												real_time audio in channel 2 from "BUILD/M01_TRAV.ACM">
-												real_time audio in channel 3 from "BUILD/M01_TRAV.ACM">
-												real_time audio in channel 4 from "BUILD/M01_TRAV.ACM">
-												real_time audio in channel 5 from "BUILD/M01_TRAV.ACM">
-												real_time audio in channel 6 from "BUILD/M01_TRAV.ACM">
-												real_time audio in channel 7 from "BUILD/M01_TRAV.ACM">
-                                               
+	application file	MainApp     from "BUILD/FMVTEST"
+	green       file    videoRtf    from record real_time mpeg vid01 in channel 0 from "BUILD/VIDEO01.MMD" eors at vid01.last
 
 {
 	"COPYRGHT.TXT"	owner 0.0 protection 0x111	from	Copyright
 	"ABSTRACT.TXT"	owner 0.0 protection 0x111	from	Abstract
 	"BIBLIOGR.TXT"	owner 0.0 protection 0x111	from	Biblio
-	"CDI_NOBELIA"   owner 0.0 protection 0x555	from	Nobelia
-	"INTRO.RTF"     owner 0.0 protection 0x111  from    IntroRtf
-	"GAME.RTF"      owner 0.0 protection 0x111  from    GameRtf
-	"MUSIC.RTF"     owner 0.0 protection 0x111  from    MusicRtf
-	"SCORE.RTF"     owner 0.0 protection 0x111  from    ScoreRtf
-	"TITLE.RTF"     owner 0.0 protection 0x111  from    TitleRtf
-	"WORLD.RTF"     owner 0.0 protection 0x111  from    WorldRtf
-	"PLANE_A.PAL"   owner 0.0 protection 0x111  from    PlaneAPal
-	"PLANE_B.PAL"   owner 0.0 protection 0x111  from    PlaneBPal
+	"CDI_FMVTEST"   owner 0.0 protection 0x555	from	MainApp
+	"VIDEO01.RTF"	owner 0.0 protection 0x111	from    videoRtf
 }
 

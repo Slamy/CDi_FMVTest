@@ -1,5 +1,6 @@
 #include <csd.h>
 #include <sysio.h>
+#include <signal.h>
 #include <ucm.h>
 #include <events.h>
 #include <stdio.h>
@@ -12,13 +13,20 @@
 #include "cdio.h"
 
 int mainSignal(sigCode)
-	int sigCode;
+int sigCode;
 {
-	mpegSignal(sigCode);
+	if (sigCode == SIGINT)
+	{
+		abort();
+	}
+	else
+	{
+		mpegSignal(sigCode);
+	}
 }
 
-void initProgram() {
-
+void initProgram()
+{
 }
 
 void initSystem()
@@ -36,14 +44,17 @@ void closeSystem()
 	closeInput();
 }
 
-void runProgram() {
+void runProgram()
+{
 	int evId = _ev_link("line_event");
 
 	setIcf(ICF_MAX, ICF_MAX);
-	while(1) {
-		if (mpegStatus == MPP_STOP) {
+	while (1)
+	{
+		if (mpegStatus == MPP_STOP)
+		{
 			printf("Starting FMV\n");
-			playMpeg("/cd/cdipal.rtf", 0);
+			playMpeg("/cd/VIDEO01.RTF", 0);
 		}
 
 		_ev_wait(evId, 1, 1); /* Wait for VBLANK */
@@ -51,8 +62,8 @@ void runProgram() {
 }
 
 int main(argc, argv)
-	int argc;
-	char* argv[];
+int argc;
+char *argv[];
 {
 	intercept(mainSignal);
 	initSystem();

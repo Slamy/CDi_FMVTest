@@ -1,7 +1,8 @@
 #ifndef __INPUT_H__
-#define	__INPUT_H__
+#define __INPUT_H__
 
-typedef struct InputRelative {
+typedef struct InputRelative
+{
 	short DeltaX;
 	short DeltaY;
 	short Buttons;

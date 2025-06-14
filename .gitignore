@@ -7,7 +7,12 @@ MASTER.LOG
 /README.TXT
 /tocsplit.exe
 /tocsplit.ini
-/vcddia1.GIF
 /howtovcd.doc
 settings.json
 /cdilink.exe
+*.mov
+*.m1v
+*.avi
+*.mp2
+*.mpg
+*.mov.idxb

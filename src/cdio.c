@@ -17,13 +17,15 @@ int readData()
 	return res;
 }
 
-void safeRead(readFunc)
-	int (*readFunc)();
+void safeRead(readFunc) int (*readFunc)();
 {
 	int retry = RETRY_COUNT;
-	while (1) {	
-		if (readFunc() > 0) return;
-		if (retry-- == 0) {
+	while (1)
+	{
+		if (readFunc() > 0)
+			return;
+		if (retry-- == 0)
+		{
 			/*discError();
 			retry = RETRY_COUNT;
 			*/
