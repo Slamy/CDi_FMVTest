@@ -6,11 +6,9 @@
 #include <stdio.h>
 #include <setsys.h>
 
-#include "input.h"
 #include "video.h"
 #include "graphics.h"
 #include "mpeg.h"
-#include "cdio.h"
 
 int mainSignal(sigCode)
 int sigCode;
@@ -34,14 +32,12 @@ void initSystem()
 	initVideo();
 	initGraphics();
 	initMpeg();
-	initInput();
 	initProgram();
 }
 
 void closeSystem()
 {
 	closeVideo();
-	closeInput();
 }
 
 void runProgram()

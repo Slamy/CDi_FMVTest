@@ -2,12 +2,10 @@
 -n=cdi_fmvtest
 -o=build\fmvtest
 D:\OS9\CDI\lib\cstart.r
-out\cdio.r
 out\main.r
 out\graphics.r
 out\mpeg.r
 out\video.r
-out\input.r
 -l=D:\OS9\CDI\lib\cdi.l
 -l=D:\OS9\CDI\lib\cdisys.l
 -l=D:\OS9\CDI\lib\clib.l

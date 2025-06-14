@@ -188,6 +188,4 @@ void initGraphics()
 {
 	createVideoBuffers();
 	clearPalette();
-	/*readPalette(PA, "PLANE_A.PAL");
-	readPalette(PB, "PLANE_B.PAL");*/
 }

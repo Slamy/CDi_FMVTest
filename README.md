@@ -4,6 +4,7 @@ Simple MPEG Video and Audio player for the Philips CD-i.
 
 Features
 - Provides an example for MPEG Playback
+- Prints relevant events on the serial port
 - Can be modified to only play Video or Audio
 - Might be helpful for Emulator development
 
@@ -24,6 +25,8 @@ Since not video quality, but building a MPEG capable application for the CD-i is
 ### Prerequisites
 
 Clone https://github.com/TwBurn/cdi-sdk by updating the git submodules and have it mounted as D: drive in winecfg.
+
+For stub loading this application on a CD-i using the serial port, [cdilink](https://www.cdiemu.org/?body=site/cdilink.htm) is required.
 
 ### Compiling
 
@@ -55,6 +58,13 @@ Keep in mind that MAME currently has no DVC emulation! It won't work!
 ### Start image on cdiemu
 
 	wine wcdiemu-v053b7.exe disk/FMVTEST.CDI -playcdi -start
+
+### Start application via stub loader
+
+Not feeling like burning yet another CD today?
+
+Have `Preview 20250326` of https://twburn.itch.io/skyways in your CD-i before launch.
+The contained movie file has the same filename and will be used when loading via serial port.
 
 ### Copy to MiSTer
 
