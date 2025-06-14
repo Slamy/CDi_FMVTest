@@ -1,1 +1,0 @@
-#define BUILD_VERSION "BUILD do 24-02-2022  7:47:57,13\n"
