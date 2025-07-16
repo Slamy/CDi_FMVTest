@@ -12,7 +12,7 @@
 
 /* Have at least one of them enabled! */
 #define ENABLE_AUDIO
-#define ENABLE_VIDEO
+/* #define ENABLE_VIDEO */
 
 extern int errno;
 
@@ -266,6 +266,7 @@ void mpegPic()
 }
 
 int sigcnt = 0;
+int repeat = 0;
 
 int mpegSignal(sigCode)
 int sigCode;
@@ -274,6 +275,12 @@ int sigCode;
 	{
 		/* Occurs when playback has finished */
 		printf("PCB %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat);
+
+		if (!repeat)
+		{
+			repeat = 1;
+			stopMpeg();
+		}
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
