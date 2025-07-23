@@ -10,6 +10,8 @@
 #include "graphics.h"
 #include "mpeg.h"
 
+#include "sfx.c"
+
 int mainSignal(sigCode)
 int sigCode;
 {
@@ -50,7 +52,7 @@ void runProgram()
 		if (mpegStatus == MPP_STOP)
 		{
 			printf("Starting FMV\n");
-			playMpeg("/cd/VIDEO01.RTF", 0);
+			playMpeg(fma_mpg, sizeof(fma_mpg));
 		}
 
 		_ev_wait(evId, 1, 1); /* Wait for VBLANK */

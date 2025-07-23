@@ -53,4 +53,6 @@ extern int mpegStatus;
 extern int mvPath, maPath;
 extern int mvMapId, maMapId;
 
+void playMpeg(unsigned char *buffer, int len);
+
 #endif

@@ -152,17 +152,18 @@ void initMpeg()
 	printf("InitMPEG %d %d - %X %X - %X %X\n", maPath, mvPath, &mvPcl[0], mvPcl[0].PCL_Nxt, &mvPcl[MV_PCL_COUNT - 1], mvPcl[MV_PCL_COUNT - 1].PCL_Nxt);
 }
 
-void playMpeg(path, channel) char *path;
-int channel;
+void playMpeg(unsigned char *buffer, int len)
 {
+	int channel = 0;
+
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
-	mvMapId = mv_create(mvPath, PLAYCD);
-	maMapId = ma_create(maPath, PLAYCD);
+	mvMapId = mv_create(mvPath, PLAYHOST);
+	maMapId = ma_create(maPath, PLAYHOST);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
-	printf("playMpeg %s %d - %d %d\n", path, channel, maMapId, mvMapId);
+	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
 	/* Setup initial FMV parameters */
 	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
 	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
@@ -189,14 +190,11 @@ int channel;
 #endif
 
 #ifdef ENABLE_AUDIO
-	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
+	DEBUG(ma_hostplay(maPath, maMapId, len, buffer, MV_NO_OFFSET, &maStatus, MV_NO_SYNC, 0));
 #endif
 
 	/* Open file, start play */
-	mpegFile = open(path, _READ);
-	lseek(mpegFile, 0, 0); /* Seek to beginning */
-	DEBUG(ss_play(mpegFile, &mpegPcb));
-	printf("Started Play %s %d\n", path, mpegFile);
+	printf("Started Play\n");
 }
 
 void stopMpeg()
@@ -208,9 +206,11 @@ void stopMpeg()
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_abort(maPath));
 #endif
-
+	printf("%d\n", __LINE__);
 	DEBUG(mv_hide(mvPath));
+	printf("%d\n", __LINE__);
 	DEBUG(mv_release(mvPath));
+	printf("%d\n", __LINE__);
 
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_cntrl(maPath, maMapId, 0x80808080, 0L));
@@ -308,8 +308,7 @@ int sigCode;
 			}
 		}
 		/* Buffers should never fill. Report via console if it happens */
-		if (full_cnt > 5)
-			printf("MV %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
+		printf("MV %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 	}
 	else if (sigCode == MA_SIG_PCL)
 	{
@@ -328,9 +327,7 @@ int sigCode;
 				err_cnt++;
 			}
 		}
-
-		if (full_cnt > 5)
-			printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
+		printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 	}
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
@@ -347,11 +344,8 @@ int sigCode;
 		ma_dsc_diff = maInfo.MAS_DSC - last_ma_dsc;
 		dclk_diff = dclk - last_dclk;
 
-		if (sigcnt < 20)
-		{
-			printf("MA %d %x %x %d %d\n", sigcnt, sigCode,
-				   maInfo.MAS_Head, ma_dsc_diff, dclk_diff);
-		}
+		printf("MA %d %x %x %d %d\n", sigcnt, sigCode,
+			   maInfo.MAS_Head, ma_dsc_diff, dclk_diff);
 		last_dclk = dclk;
 		last_ma_dsc = maInfo.MAS_DSC;
 		sigcnt++;
