@@ -3,6 +3,7 @@
 
 /* --- FMA ---  */
 #define FMA_CMD (*((unsigned short *)0x0E03000))
+#define FMA_STAT (*((unsigned short *)0x0E03002))
 #define FMA_R04 (*((unsigned short *)0x0E03004))
 #define FMA_R06 (*((unsigned short *)0x0E03006))
 #define FMA_STRM (*((unsigned short *)0x0E03008))

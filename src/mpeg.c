@@ -338,14 +338,15 @@ int sigCode;
 		unsigned long dclk = FMA_DCLK;
 		int ma_dsc_diff;
 		unsigned long dclk_diff;
+		unsigned short status = FMA_STAT;
 
 		DEBUG(ma_status(maPath, &maInfo));
 
 		ma_dsc_diff = maInfo.MAS_DSC - last_ma_dsc;
 		dclk_diff = dclk - last_dclk;
 
-		printf("MA %d %x %x %d %d\n", sigcnt, sigCode,
-			   maInfo.MAS_Head, ma_dsc_diff, dclk_diff);
+		printf("MA %d %x %x %x %d %d\n", sigcnt, sigCode,
+			   maInfo.MAS_Head, status, ma_dsc_diff, dclk_diff);
 		last_dclk = dclk;
 		last_ma_dsc = maInfo.MAS_DSC;
 		sigcnt++;
