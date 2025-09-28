@@ -194,7 +194,20 @@ int channel;
 
 	/* Open file, start play */
 	mpegFile = open(path, _READ);
-	lseek(mpegFile, 0, 0); /* Seek to beginning */
+	/* Space Ace intro at 01:34:11 00 */
+	/* lseek(mpegFile, 3768, 0); */ /* TIME 43:46 00 */
+	/* lseek(mpegFile, 0, 0); */ /* TIME 43:45 00 */
+	/* lseek(mpegFile, 423825, 0); */ /* TIME 46 26 00 */
+	/* lseek(mpegFile, 7943250, 0); */ /* TIME 01 35 23 00 */
+	/* lseek(mpegFile, 0x010000, 0); */ /* TIME 44 02 00 */
+	/* lseek(mpegFile, 7943250-(60+20)*75*35, 0); */ /* TIME 1 33 71 00 */
+	/* lseek(mpegFile, 7838250, 0);  */ /* TIME 01 34 47 00 */
+	/* lseek(mpegFile, 7837200, 0); */  /* TIME 01:34:46 00 */
+	/* lseek(mpegFile, 7837200-2048, 0); */  /* TIME 01 34 45 00 */
+	/* lseek(mpegFile, 7837200-2048*30, 0); */ /* TIME 1341600 */
+	/* lseek(mpegFile, 7837200-2048*35, 0); */ /* TIME 1341100 */
+	lseek(mpegFile, 7837200-2048*35-1000, 0);  /* TIME 1341100 */
+
 	DEBUG(ss_play(mpegFile, &mpegPcb));
 	printf("Started Play %s %d\n", path, mpegFile);
 }
@@ -303,6 +316,12 @@ int sigCode;
 		/* Buffers should never fill. Report via console if it happens */
 		if (full_cnt > 5)
 			printf("MV %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
+/*
+		if (full_cnt == 1)
+		{
+#define CDIC_TIME (*((unsigned long *)0x303C02))
+			printf("TIME %lx\n", CDIC_TIME);
+		}*/
 	}
 	else if (sigCode == MA_SIG_PCL)
 	{
@@ -352,6 +371,10 @@ int sigCode;
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
 		/* Event coming from MPEG Video driver */
+		static unsigned int wired_or = 0;
+
+		wired_or |= sigCode;
+		printf("V %x %x\n", sigCode, wired_or);
 		if (sigCode & MV_TRIG_PIC)
 		{
 			if (mpegStatus == MPP_INIT)

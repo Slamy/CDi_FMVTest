@@ -50,7 +50,7 @@ void runProgram()
 		if (mpegStatus == MPP_STOP)
 		{
 			printf("Starting FMV\n");
-			playMpeg("/cd/VIDEO01.RTF", 0);
+			playMpeg("/cd/spaceace.rtf", 0);
 		}
 
 		_ev_wait(evId, 1, 1); /* Wait for VBLANK */
