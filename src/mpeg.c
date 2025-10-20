@@ -12,7 +12,7 @@
 
 /* Have at least one of them enabled! */
 #define ENABLE_AUDIO
-/* #define ENABLE_VIDEO */
+#define ENABLE_VIDEO
 
 extern int errno;
 
@@ -194,6 +194,7 @@ int channel;
 
 	/* Open file, start play */
 	mpegFile = open(path, _READ);
+	lseek(mpegFile, 0, 0); /* Seek to beginning */
 	DEBUG(ss_play(mpegFile, &mpegPcb));
 	printf("Started Play %s %d\n", path, mpegFile);
 }
@@ -302,10 +303,10 @@ int sigCode;
 		/* Buffers should never fill. Report via console if it happens */
 		if (full_cnt > 5)
 			printf("MV %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
-/*
+		/*
 		if (full_cnt == 1)
 		{
-#define CDIC_TIME (*((unsigned long *)0x303C02))
+			#define CDIC_TIME (*((unsigned long *)0x303C02))
 			printf("TIME %lx\n", CDIC_TIME);
 		}*/
 	}
