@@ -194,20 +194,6 @@ int channel;
 
 	/* Open file, start play */
 	mpegFile = open(path, _READ);
-	/* Space Ace intro at 01:34:11 00 */
-	/* lseek(mpegFile, 3768, 0); */ /* TIME 43:46 00 */
-	/* lseek(mpegFile, 0, 0); */ /* TIME 43:45 00 */
-	/* lseek(mpegFile, 423825, 0); */ /* TIME 46 26 00 */
-	/* lseek(mpegFile, 7943250, 0); */ /* TIME 01 35 23 00 */
-	/* lseek(mpegFile, 0x010000, 0); */ /* TIME 44 02 00 */
-	/* lseek(mpegFile, 7943250-(60+20)*75*35, 0); */ /* TIME 1 33 71 00 */
-	/* lseek(mpegFile, 7838250, 0);  */ /* TIME 01 34 47 00 */
-	/* lseek(mpegFile, 7837200, 0); */  /* TIME 01:34:46 00 */
-	/* lseek(mpegFile, 7837200-2048, 0); */  /* TIME 01 34 45 00 */
-	/* lseek(mpegFile, 7837200-2048*30, 0); */ /* TIME 1341600 */
-	/* lseek(mpegFile, 7837200-2048*35, 0); */ /* TIME 1341100 */
-	lseek(mpegFile, 7837200-2048*35-1000, 0);  /* TIME 1341100 */
-
 	DEBUG(ss_play(mpegFile, &mpegPcb));
 	printf("Started Play %s %d\n", path, mpegFile);
 }
@@ -380,5 +366,13 @@ int sigCode;
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
 		}
+	}
+	else if ((sigCode & 0xf000) == MA_SIG_BASE)
+	{
+		/* Event coming from MPEG Video driver */
+		static unsigned int wired_or = 0;
+
+		wired_or |= sigCode;
+		/* printf("A %x %x\n", sigCode, wired_or); */
 	}
 }
