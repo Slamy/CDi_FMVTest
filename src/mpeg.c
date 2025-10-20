@@ -361,7 +361,7 @@ int sigCode;
 		static unsigned int wired_or = 0;
 
 		wired_or |= sigCode;
-		printf("V %x %x\n", sigCode, wired_or);
+		/* printf("V %x %x\n", sigCode, wired_or); */
 		if (sigCode & MV_TRIG_PIC)
 		{
 			if (mpegStatus == MPP_INIT)
