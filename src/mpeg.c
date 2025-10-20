@@ -12,7 +12,7 @@
 
 /* Have at least one of them enabled! */
 #define ENABLE_AUDIO
-#define ENABLE_VIDEO
+/* #define ENABLE_VIDEO */
 
 extern int errno;
 
@@ -373,6 +373,6 @@ int sigCode;
 		static unsigned int wired_or = 0;
 
 		wired_or |= sigCode;
-		/* printf("A %x %x\n", sigCode, wired_or); */
+		printf("A %x %x\n", sigCode, wired_or);
 	}
 }
