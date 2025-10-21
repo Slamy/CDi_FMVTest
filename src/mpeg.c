@@ -65,7 +65,7 @@ void initMpegPcb(channel) int channel;
 
 	for (i = 0; i < 16; i++)
 	{
-		maCil[i] =  maPcl;
+		maCil[i] = maPcl;
 	}
 
 	mvCil[channel] = mvPcl;
@@ -346,11 +346,6 @@ int sigCode;
 		ma_dsc_diff = maInfo.MAS_DSC - last_ma_dsc;
 		dclk_diff = dclk - last_dclk;
 
-		if (sigcnt < 20)
-		{
-			printf("MA %d %x %x %d %d\n", sigcnt, sigCode,
-				   maInfo.MAS_Head, ma_dsc_diff, dclk_diff);
-		}
 		last_dclk = dclk;
 		last_ma_dsc = maInfo.MAS_DSC;
 		sigcnt++;
@@ -359,9 +354,13 @@ int sigCode;
 	{
 		/* Event coming from MPEG Video driver */
 		static unsigned int wired_or = 0;
+		int pics = FMV_PICS_IN_FIFO;
 
 		wired_or |= sigCode;
-		printf("V %x %x\n", sigCode, FMV_PICS_IN_FIFO);
+
+		if (pics < 3)
+			printf("V %x %x\n", sigCode, pics);
+
 		if (sigCode & MV_TRIG_PIC)
 		{
 			if (mpegStatus == MPP_INIT)
