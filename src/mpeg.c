@@ -60,12 +60,12 @@ void initMpegPcb(channel) int channel;
 
 	for (i = 0; i < 32; i++)
 	{
-		mvCil[i] = (PCL *)NULL;
+		mvCil[i] = mvPcl;
 	}
 
 	for (i = 0; i < 16; i++)
 	{
-		maCil[i] = (PCL *)NULL;
+		maCil[i] =  maPcl;
 	}
 
 	mvCil[channel] = mvPcl;
@@ -81,7 +81,7 @@ void initMpegPcb(channel) int channel;
 #endif
 	mpegPcb.PCB_Data = NULL;
 	mpegPcb.PCB_Sig = MPEG_SIG_PCB;
-	mpegPcb.PCB_Chan = 0x00000001 << channel;
+	mpegPcb.PCB_Chan = 0xffffffff;
 	mpegPcb.PCB_AChan = 0;
 	mpegPcb.PCB_Rec = 1; /* assume that there is only 1 EOR */
 	mpegPcb.PCB_Stat = 0;
@@ -361,7 +361,7 @@ int sigCode;
 		static unsigned int wired_or = 0;
 
 		wired_or |= sigCode;
-		/* printf("V %x %x\n", sigCode, wired_or); */
+		printf("V %x %x\n", sigCode, FMV_PICS_IN_FIFO);
 		if (sigCode & MV_TRIG_PIC)
 		{
 			if (mpegStatus == MPP_INIT)
