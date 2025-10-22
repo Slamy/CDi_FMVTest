@@ -68,8 +68,6 @@ void initMpegPcb(channel) int channel;
 		maCil[i] = maPcl;
 	}
 
-	mvCil[channel] = mvPcl;
-	maCil[channel] = maPcl;
 
 	mpegPcb.PCB_Video = NULL;
 	mpegPcb.PCB_Audio = NULL;
@@ -184,13 +182,14 @@ int channel;
 	mpegStatus = MPP_INIT;
 
 	/* Setup MPEG Playback */
+#ifdef ENABLE_AUDIO
+	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, -2, 0));
+#endif
 #ifdef ENABLE_VIDEO
-	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
+	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, maPath, 0));
 #endif
 
-#ifdef ENABLE_AUDIO
-	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
-#endif
+
 
 	/* Open file, start play */
 	mpegFile = open(path, _READ);
@@ -301,7 +300,7 @@ int sigCode;
 			}
 		}
 		/* Buffers should never fill. Report via console if it happens */
-		if (full_cnt > 5)
+		if (full_cnt > 4)
 			printf("MV %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 		/*
 		if (full_cnt == 1)
@@ -328,7 +327,7 @@ int sigCode;
 			}
 		}
 
-		if (full_cnt > 5)
+		if (full_cnt > 4)
 			printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 	}
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
