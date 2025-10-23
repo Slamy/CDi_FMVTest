@@ -357,8 +357,7 @@ int sigCode;
 
 		wired_or |= sigCode;
 
-		if (pics < 3)
-			printf("V %x %x\n", sigCode, pics);
+		printf("%x\n", FMA_DCLK);
 
 		if (sigCode & MV_TRIG_PIC)
 		{
