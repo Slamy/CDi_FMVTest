@@ -11,7 +11,6 @@
 #include "hwreg.h"
 
 /* Have at least one of them enabled! */
-#define ENABLE_AUDIO
 #define ENABLE_VIDEO
 
 extern int errno;
@@ -182,14 +181,13 @@ int channel;
 	mpegStatus = MPP_INIT;
 
 	/* Setup MPEG Playback */
-#ifdef ENABLE_AUDIO
-	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, -2, 0));
-#endif
 #ifdef ENABLE_VIDEO
-	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, maPath, 0));
+	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
 #endif
 
-
+#ifdef ENABLE_AUDIO
+	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
+#endif
 
 	/* Open file, start play */
 	mpegFile = open(path, _READ);
@@ -352,12 +350,21 @@ int sigCode;
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
 		/* Event coming from MPEG Video driver */
-		static unsigned int wired_or = 0;
+		static unsigned long first_dclk = 0;
 		int pics = FMV_PICS_IN_FIFO;
 
-		wired_or |= sigCode;
+		int fma_dclk = FMA_DCLK >> 6;
+		int fmv_dts = FMV_DTS;
+		int relative_dclk;
+		static int reduce_print_cnt = 0;
 
-		printf("%x\n", FMA_DCLK);
+		if (!first_dclk)
+			first_dclk = fma_dclk;
+		relative_dclk = fma_dclk - first_dclk;
+
+		reduce_print_cnt++;
+		if ((reduce_print_cnt & 0xf) == 0)
+			printf("%d\n", relative_dclk, fmv_dts, relative_dclk - fmv_dts);
 
 		if (sigCode & MV_TRIG_PIC)
 		{
