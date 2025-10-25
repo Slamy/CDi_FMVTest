@@ -352,22 +352,14 @@ int sigCode;
 		/* Event coming from MPEG Video driver */
 		static unsigned long first_dclk = 0;
 		int pics = FMV_PICS_IN_FIFO;
-
-		int fma_dclk = FMA_DCLK >> 6;
-		int fmv_dts = FMV_DTS;
-		int relative_dclk;
-		static int reduce_print_cnt = 0;
-
-		if (!first_dclk)
-			first_dclk = fma_dclk;
-		relative_dclk = fma_dclk - first_dclk;
-
-		reduce_print_cnt++;
-		if ((reduce_print_cnt & 0xf) == 0)
-			printf("%d\n", relative_dclk, fmv_dts, relative_dclk - fmv_dts);
+		int pic_rate = FMV_PIC_RATE;
+		int disp_rate = FMV_DISP_RATE;
+		int frame_rate = FMV_FRAME_RATE;
 
 		if (sigCode & MV_TRIG_PIC)
 		{
+			printf("%d %d %d\n", pic_rate, disp_rate, frame_rate);
+
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
 		}
