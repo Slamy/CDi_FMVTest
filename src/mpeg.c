@@ -355,10 +355,18 @@ int sigCode;
 		int pic_rate = FMV_PIC_RATE;
 		int disp_rate = FMV_DISP_RATE;
 		int frame_rate = FMV_FRAME_RATE;
+		int dts = FMV_DTS;
+		int fmv_dclk = FMV_DCLK;
+		int V_Stat = *(unsigned short *)(0x00dfb180 + 0x134);
+		int V_BufStat = *(unsigned char *)(0x00dfb180 + 0x17b);
 
 		if (sigCode & MV_TRIG_PIC)
 		{
-			printf("%d %d %d\n", pic_rate, disp_rate, frame_rate);
+			static int reduce_print_cnt = 0;
+
+			reduce_print_cnt++;
+			if ((reduce_print_cnt & 0x7) == 0)
+				printf("%d %d %d\n", dts, fmv_dclk, dts - fmv_dclk);
 
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
