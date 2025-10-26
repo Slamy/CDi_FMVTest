@@ -184,35 +184,22 @@ int channel;
 	FMV_FRAME_RATE = 0x1000;
 
 	printf("mvPath %x\n", mvPath);
-
 	ptr = (unsigned long *)(0x001500);
-	printf("%x\n", ptr);
 	ptr = (unsigned long *)ptr[0x48 / 4];
-	printf("%x\n", ptr);
-	ptr += (mvPath - 1);
-	printf("%x\n", ptr);
+	ptr += (mvPath - 1); /* not sure about this */
 	ptr = (unsigned long *)ptr[0];
-	printf("%x\n", ptr);
 	ptr = (unsigned long *)ptr[1];
-	printf("%x\n", ptr);
 	fdrvs1_static = (unsigned long *)ptr[1];
 	/* On MiSTer it is 0x00dfb180 */
 	/* On cdiemu with vmpega.rom it is also 0x00dfb180 */
 	/* On 210/05 with VMPEG it is 0x00dfa980 */
-	printf("%x\n", fdrvs1_static);
-	DEBUG(mv_borcol(mvPath, mvMapId, 1, 2, 3));
-	/* printf("%x\n", fdrvs1_static[0x68/4]); */
-	memcpy(temp_array1, fdrvs1_static, sizeof(temp_array1));
-	DEBUG(mv_borcol(mvPath, mvMapId, 4, 5, 6));
-	memcpy(temp_array2, fdrvs1_static, sizeof(temp_array1));
-	/* printf("%x\n", fdrvs1_static[0x68/4]); */
-	/* I need 0x00dfb180 */
+	printf("fdrvs1_static: %x\n", fdrvs1_static);
 	dma_adr = fdrvs1_static[83];
 	fma_dclk_adr = fdrvs1_static[85];
-	V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
-	V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
 	printf("dma_adr %x\n", dma_adr); /* must be e04000 */
 	printf("fma_dclk_adr %x\n", fma_dclk_adr); /* must be e03010 */
+	V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+	V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
 	printf("V_Stat %x\n", V_Stat); /* 8 = stopped */
 	printf("V_BufStat %x\n", V_BufStat); /* 0 */
 	V_CurDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x104);
