@@ -149,9 +149,25 @@ void initMpeg()
 	printf("InitMPEG %d %d - %X %X - %X %X\n", maPath, mvPath, &mvPcl[0], mvPcl[0].PCL_Nxt, &mvPcl[MV_PCL_COUNT - 1], mvPcl[MV_PCL_COUNT - 1].PCL_Nxt);
 }
 
+unsigned long temp_array1[100];
+unsigned long temp_array2[100];
+
 void playMpeg(path, channel) char *path;
 int channel;
 {
+	unsigned long *ptr;
+	unsigned long *fdrvs1_static;
+	unsigned long dma_adr;
+	unsigned long fma_dclk_adr;
+	int V_Stat;
+	int V_BufStat;
+	int V_CurDelta;
+	int V_NewDelta;
+	int V_SCRupd;
+	int V_PICCnt;
+	int V_SCR;
+
+	int i = 0;
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
@@ -165,6 +181,54 @@ int channel;
 	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
 	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
+	FMV_FRAME_RATE = 0x1000;
+
+	printf("mvPath %x\n", mvPath);
+
+	ptr = (unsigned long *)(0x001500);
+	printf("%x\n", ptr);
+	ptr = (unsigned long *)ptr[0x48 / 4];
+	printf("%x\n", ptr);
+	ptr += (mvPath - 1);
+	printf("%x\n", ptr);
+	ptr = (unsigned long *)ptr[0];
+	printf("%x\n", ptr);
+	ptr = (unsigned long *)ptr[1];
+	printf("%x\n", ptr);
+	fdrvs1_static = (unsigned long *)ptr[1];
+	/* On MiSTer it is 0x00dfb180 */
+	/* On cdiemu with vmpega.rom it is also 0x00dfb180 */
+	/* On 210/05 with VMPEG it is 0x00dfa980 */
+	printf("%x\n", fdrvs1_static);
+	DEBUG(mv_borcol(mvPath, mvMapId, 1, 2, 3));
+	/* printf("%x\n", fdrvs1_static[0x68/4]); */
+	memcpy(temp_array1, fdrvs1_static, sizeof(temp_array1));
+	DEBUG(mv_borcol(mvPath, mvMapId, 4, 5, 6));
+	memcpy(temp_array2, fdrvs1_static, sizeof(temp_array1));
+	/* printf("%x\n", fdrvs1_static[0x68/4]); */
+	/* I need 0x00dfb180 */
+	dma_adr = fdrvs1_static[83];
+	fma_dclk_adr = fdrvs1_static[85];
+	V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+	V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+	printf("dma_adr %x\n", dma_adr); /* must be e04000 */
+	printf("fma_dclk_adr %x\n", fma_dclk_adr); /* must be e03010 */
+	printf("V_Stat %x\n", V_Stat); /* 8 = stopped */
+	printf("V_BufStat %x\n", V_BufStat); /* 0 */
+	V_CurDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x104);
+	V_NewDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x108);
+	V_SCRupd = *(unsigned long *)(((char *)fdrvs1_static) + 0x166);
+	V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
+	V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
+
+	for (i = 0; i < 100; i++)
+	{
+		/* if (temp_array1[i] != temp_array2[i]) */
+		{
+			/* printf("Diff at %d %x %x\n",i,temp_array1[i], temp_array2[i]); */
+		}
+	}
+
 	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
 
@@ -285,6 +349,7 @@ int sigCode;
 		/* Check for buffers */
 		int full_cnt = 0;
 		int err_cnt = 0;
+		static int reduce_print_cnt = 0;
 		int i;
 		for (i = 0; i < MV_PCL_COUNT; i++)
 		{
@@ -298,8 +363,10 @@ int sigCode;
 			}
 		}
 		/* Buffers should never fill. Report via console if it happens */
-		if (full_cnt > 4)
-			printf("MV %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
+
+		reduce_print_cnt++;
+		if ((reduce_print_cnt & 0xf) == 0)
+			printf("MV %d\n", full_cnt);
 		/*
 		if (full_cnt == 1)
 		{
