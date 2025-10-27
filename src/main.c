@@ -50,7 +50,7 @@ void runProgram()
 		if (mpegStatus == MPP_STOP)
 		{
 			printf("Starting FMV\n");
-			playMpeg("/cd/MPEGAV/MUSIC01.DAT", 0);
+			playMpeg();
 		}
 
 		_ev_wait(evId, 1, 1); /* Wait for VBLANK */

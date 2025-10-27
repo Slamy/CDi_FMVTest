@@ -12,6 +12,7 @@
 
 /* Have at least one of them enabled! */
 #define ENABLE_VIDEO
+#define ENABLE_AUDIO
 
 extern int errno;
 
@@ -66,7 +67,6 @@ void initMpegPcb(channel) int channel;
 	{
 		maCil[i] = maPcl;
 	}
-
 
 	mpegPcb.PCB_Video = NULL;
 	mpegPcb.PCB_Audio = NULL;
@@ -149,23 +149,14 @@ void initMpeg()
 	printf("InitMPEG %d %d - %X %X - %X %X\n", maPath, mvPath, &mvPcl[0], mvPcl[0].PCL_Nxt, &mvPcl[MV_PCL_COUNT - 1], mvPcl[MV_PCL_COUNT - 1].PCL_Nxt);
 }
 
-unsigned long temp_array1[100];
-unsigned long temp_array2[100];
+unsigned long *fdrvs1_static;
 
-void playMpeg(path, channel) char *path;
-int channel;
+void playMpeg()
 {
 	unsigned long *ptr;
-	unsigned long *fdrvs1_static;
 	unsigned long dma_adr;
 	unsigned long fma_dclk_adr;
-	int V_Stat;
-	int V_BufStat;
-	int V_CurDelta;
-	int V_NewDelta;
-	int V_SCRupd;
-	int V_PICCnt;
-	int V_SCR;
+	int channel = 0;
 
 	int i = 0;
 	mpegStatus = MPP_STOP;
@@ -175,15 +166,15 @@ int channel;
 	maMapId = ma_create(maPath, PLAYCD);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
-	printf("playMpeg %s %d - %d %d\n", path, channel, maMapId, mvMapId);
+	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
 	/* Setup initial FMV parameters */
 	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
 	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
 	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-	FMV_FRAME_RATE = 0x1000;
 
 	printf("mvPath %x\n", mvPath);
+	/* This is very dirty ! But it seems to work !*/
 	ptr = (unsigned long *)(0x001500);
 	ptr = (unsigned long *)ptr[0x48 / 4];
 	ptr += (mvPath - 1); /* not sure about this */
@@ -196,17 +187,11 @@ int channel;
 	printf("fdrvs1_static: %x\n", fdrvs1_static);
 	dma_adr = fdrvs1_static[83];
 	fma_dclk_adr = fdrvs1_static[85];
-	printf("dma_adr %x\n", dma_adr); /* must be e04000 */
+	printf("dma_adr %x\n", dma_adr);		   /* must be e04000 */
 	printf("fma_dclk_adr %x\n", fma_dclk_adr); /* must be e03010 */
-	V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
-	V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
-	printf("V_Stat %x\n", V_Stat); /* 8 = stopped */
-	printf("V_BufStat %x\n", V_BufStat); /* 0 */
-	V_CurDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x104);
-	V_NewDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x108);
-	V_SCRupd = *(unsigned long *)(((char *)fdrvs1_static) + 0x166);
-	V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
-	V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
+	/* confirm the correctness of fdrvs1_static */
+	DEBUG(dma_adr == 0xe04000);
+	DEBUG(fma_dclk_adr == 0xe03010);
 
 	for (i = 0; i < 100; i++)
 	{
@@ -240,11 +225,19 @@ int channel;
 	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
 #endif
 
-	/* Open file, start play */
-	mpegFile = open(path, _READ);
+	/* Assume we are not running from serial stub first */
+	mpegFile = open("/cd/VIDEO01.RTF", _READ);
+	if (mpegFile < 0)
+	{
+		/* We are running via serial stub on real hardware and Top Gun Disc? */
+		printf("Serial stub?\n");
+		mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ);
+	}
+	DEBUG(mpegFile >= 0);
 	lseek(mpegFile, 0, 0); /* Seek to beginning */
+
 	DEBUG(ss_play(mpegFile, &mpegPcb));
-	printf("Started Play %s %d\n", path, mpegFile);
+	printf("Started Play %d\n", mpegFile);
 }
 
 void stopMpeg()
@@ -353,7 +346,7 @@ int sigCode;
 
 		reduce_print_cnt++;
 		if ((reduce_print_cnt & 0xf) == 0)
-			printf("MV %d\n", full_cnt);
+			printf("MV %d %d\n", full_cnt, FMV_PICS_IN_FIFO);
 		/*
 		if (full_cnt == 1)
 		{
@@ -411,16 +404,34 @@ int sigCode;
 		int frame_rate = FMV_FRAME_RATE;
 		int dts = FMV_DTS;
 		int fmv_dclk = FMV_DCLK;
-		int V_Stat = *(unsigned short *)(0x00dfb180 + 0x134);
-		int V_BufStat = *(unsigned char *)(0x00dfb180 + 0x17b);
+		int fma_dclk = FMA_DCLK;
+		int gen_sync_diff = FMV_GEN_SYNC_DIFF;
+		int V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+		int V_CurDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x104);
+		int V_NewDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x108);
+		int V_SCRupd = *(unsigned long *)(((char *)fdrvs1_static) + 0x166);
+		int V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
+		int V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
+		int V_DataSize = *(unsigned long *)(((char *)fdrvs1_static) + 0x126);
+
+		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
+		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
 		if (sigCode & MV_TRIG_PIC)
 		{
 			static int reduce_print_cnt = 0;
+			/* FMV_DCLK = FMV_DCLK - 2; */
 
 			reduce_print_cnt++;
 			if ((reduce_print_cnt & 0x7) == 0)
-				printf("%d %d %d\n", dts, fmv_dclk, dts - fmv_dclk);
+			{
+#if 0
+				printf("%d %d %d %d %d %d %d %d %d %d\n", dts, fmv_dclk, V_SCR, V_PICCnt, V_CurDelta, V_Stat, V_BufStat, V_DataSize, V_DTSVal, V_LastSCR );
+				printf("%d %d %d %d %d\n", V_LastSCR, V_SCR, V_LastSCR - V_SCR, fmv_dclk, gen_sync_diff);
+				printf("%d %d %d\n", (fma_dclk>>6), dts, (fma_dclk>>6) - dts);
+#endif
+			}
 
 			if (mpegStatus == MPP_INIT)
 				mpegPic();

@@ -34,7 +34,7 @@
 
 #define FMV_RF2 (*((unsigned short *)0x0E040F2))
 #define FMV_RF4 (*((unsigned short *)0x0E040F4))
-#define FMV_R9C (*((unsigned short *)0x0E0409C))
+#define FMV_GEN_SYNC_DIFF (*((unsigned short *)0x0E0409C))
 #define FMV_R92 (*((unsigned short *)0x0E04092))
 #define FMV_RC6 (*((unsigned short *)0x0E040C6))
 #define FMV_R88 (*((unsigned short *)0x0E04088))
