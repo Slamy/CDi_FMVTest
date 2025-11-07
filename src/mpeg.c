@@ -345,7 +345,7 @@ int sigCode;
 		/* Buffers should never fill. Report via console if it happens */
 
 		reduce_print_cnt++;
-		if ((reduce_print_cnt & 0xf) == 0)
+		if (full_cnt>2)
 			printf("MV %d %d\n", full_cnt, FMV_PICS_IN_FIFO);
 		/*
 		if (full_cnt == 1)
@@ -424,8 +424,16 @@ int sigCode;
 			/* FMV_DCLK = FMV_DCLK - 2; */
 
 			reduce_print_cnt++;
-			if ((reduce_print_cnt & 0x7) == 0)
+			/* if ((reduce_print_cnt & 0x7) == 0) */
 			{
+				unsigned long timecode = FMV_TIMECD;
+				unsigned long h = (timecode >> 6) & 0x1f;		 /* 5 bits for hours*/
+				unsigned long m = (timecode) & 0x3f;			 /* 6 bits for minutes*/
+				unsigned long p = (timecode >> 16) & 0x3f;		 /* 6 bits for picture*/
+				unsigned long s = (timecode >> (16 + 6)) & 0x3f; /* 6 bits for seconds */
+				MVmapDesc *desc = mv_info(mvPath, mvMapId);
+
+				printf("%08x %08x %02d:%02d:%02d.%d\n", FMV_TIMECD, desc->MD_TimeCd, h, m, s, p);
 #if 0
 				printf("%d %d %d %d %d %d %d %d %d %d\n", dts, fmv_dclk, V_SCR, V_PICCnt, V_CurDelta, V_Stat, V_BufStat, V_DataSize, V_DTSVal, V_LastSCR );
 				printf("%d %d %d %d %d\n", V_LastSCR, V_SCR, V_LastSCR - V_SCR, fmv_dclk, gen_sync_diff);
