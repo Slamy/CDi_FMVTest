@@ -11,7 +11,7 @@
 #include "hwreg.h"
 
 /* Have at least one of them enabled! */
-#define ENABLE_VIDEO
+/* #define ENABLE_VIDEO */
 #define ENABLE_AUDIO
 
 extern int errno;
@@ -149,31 +149,23 @@ void initMpeg()
 	printf("InitMPEG %d %d - %X %X - %X %X\n", maPath, mvPath, &mvPcl[0], mvPcl[0].PCL_Nxt, &mvPcl[MV_PCL_COUNT - 1], mvPcl[MV_PCL_COUNT - 1].PCL_Nxt);
 }
 
-unsigned long *fdrvs1_static;
-
-void playMpeg()
+unsigned long *fmadrv_static = 0;
+unsigned long *fdrvs1_static = 0;
+int CalcLba(int m, int s, int f)
 {
+	return f + s * 75 + m * 60 * 75;
+}
+
+void FindFmvDriverStruct()
+{
+	int i;
 	unsigned long *ptr;
 	unsigned long dma_adr;
 	unsigned long fma_dclk_adr;
-	int channel = 0;
 
-	int i = 0;
-	mpegStatus = MPP_STOP;
+	if (fdrvs1_static != 0)
+		return;
 
-	/* Create FMV maps */
-	mvMapId = mv_create(mvPath, PLAYCD);
-	maMapId = ma_create(maPath, PLAYCD);
-
-	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
-	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
-	/* Setup initial FMV parameters */
-	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
-	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
-	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
-	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-
-	printf("mvPath %x\n", mvPath);
 	/* This is very dirty ! But it seems to work !*/
 	ptr = (unsigned long *)(0x001500);
 	ptr = (unsigned long *)ptr[0x48 / 4];
@@ -200,13 +192,54 @@ void playMpeg()
 			/* printf("Diff at %d %x %x\n",i,temp_array1[i], temp_array2[i]); */
 		}
 	}
+}
+
+void FindFmaDriverStruct()
+{
+	int i;
+
+	if (fmadrv_static != 0)
+		return;
+	for (i = 0x00dfa000; i < 0x00dfc000; i += 4)
+	{
+		if ((*(unsigned long *)i) == 0xe0300)
+		{
+			printf("Found fmadriv at %x\n", i);
+		}
+	}
+}
+
+void playMpeg()
+{
+	int channel = 0;
+	int streamid = 6;
+	int m, s, f, lba;
+
+	int i = 0;
+	mpegStatus = MPP_STOP;
+
+	/* Create FMV maps */
+	mvMapId = mv_create(mvPath, PLAYCD);
+	maMapId = ma_create(maPath, PLAYCD);
+
+	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
+	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
+	/* Setup initial FMV parameters */
+	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
+	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
+	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
+	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
+	printf("mvPath %x\n", mvPath);
+
+	FindFmvDriverStruct();
+	FindFmaDriverStruct();
 
 	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
 
 #ifdef ENABLE_AUDIO
 	/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
-	ma_cntrl(maPath, maMapId, 0x00800080, 0L);
+	ma_cntrl(maPath, maMapId, 0x00800080, streamid);
 	DEBUG(ma_trigger(maPath, MA_SIG_BASE | 0x1f));
 #endif
 
@@ -231,13 +264,23 @@ void playMpeg()
 	{
 		/* We are running via serial stub on real hardware and Top Gun Disc? */
 		printf("Serial stub?\n");
-		mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ);
+		mpegFile = open("/cd/RTF/application.rtf", _READ);
 	}
 	DEBUG(mpegFile >= 0);
-	lseek(mpegFile, 0, 0); /* Seek to beginning */
+
+	/*
+	01:00:62 At 0
+	08:46:43 Seems to be working intro talk
+	10:20:74 Cut off music
+	09:23:52 Böööh
+	*/
+	lba = CalcLba(9, 23, 52) - CalcLba(1, 0, 62);
+	/* lba = CalcLba(8, 46, 43) - CalcLba(1, 0, 62); */
+	printf("LBA is %d\n", lba);
+	lseek(mpegFile, lba * 2048, 0); /* Seek to beginning */
 
 	DEBUG(ss_play(mpegFile, &mpegPcb));
-	printf("Started Play %d\n", mpegFile);
+	printf("Started Play %d at %x at DCLK %x\n", mpegFile, CDIC_TIME, FMA_DCLK);
 }
 
 void stopMpeg()
@@ -245,17 +288,19 @@ void stopMpeg()
 	if (mpegStatus == MPP_STOP)
 		return;
 
+#ifdef ENABLE_VIDEO
 	DEBUG(mv_abort(mvPath));
+#endif
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_abort(maPath));
 #endif
 
+#ifdef ENABLE_VIDEO
 	DEBUG(mv_hide(mvPath));
-	DEBUG(mv_release(mvPath));
+#endif
 
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_cntrl(maPath, maMapId, 0x80808080, 0L));
-	DEBUG(ma_release(maPath));
 #endif
 
 	close(mpegFile);
@@ -314,7 +359,7 @@ int sigCode;
 	if (sigCode == MPEG_SIG_PCB)
 	{
 		/* Occurs when playback has finished */
-		printf("PCB %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat);
+		printf("PCB %x %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat, CDIC_TIME);
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
@@ -345,7 +390,7 @@ int sigCode;
 		/* Buffers should never fill. Report via console if it happens */
 
 		reduce_print_cnt++;
-		if (full_cnt>2)
+		if (full_cnt > 2)
 			printf("MV %d %d\n", full_cnt, FMV_PICS_IN_FIFO);
 		/*
 		if (full_cnt == 1)
@@ -372,7 +417,7 @@ int sigCode;
 			}
 		}
 
-		if (full_cnt > 4)
+		if (full_cnt > 2)
 			printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 	}
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
@@ -384,8 +429,84 @@ int sigCode;
 		unsigned long dclk = FMA_DCLK;
 		int ma_dsc_diff;
 		unsigned long dclk_diff;
+		int i;
+		unsigned short *regs = ((unsigned short *)0x0E03000);
 
+		static int cnt = 0;
 		DEBUG(ma_status(maPath, &maInfo));
+
+		cnt++;
+
+#if 0
+		if (cnt == 20)
+			ma_cntrl(maPath, maMapId, 0x00800080, 1);
+#endif
+
+		printf("MA %x %x %x %x %x %x %x", sigCode,
+			   maInfo.MAS_Stream,
+			   maInfo.MAS_Att,
+			   maInfo.MAS_Head,
+			   maInfo.MAS_CurAdr,
+			   maInfo.MAS_DSC,
+			   dclk);
+
+		if (cnt == 30)
+		{
+			stopMpeg();
+		}
+
+		if (cnt == 60)
+		{
+			stopMpeg();
+		}
+		/*
+		printf("MA %x %d %x %x %x %x\n", sigCode, maInfo.MAS_Stream, FMA_CMD, FMA_R02, FMA_RUN, FMA_IER);
+		*/
+#if 0
+		for (i = 0; i < 18; i++)
+		{
+			printf("%x ", regs[i]);
+		}
+#endif
+
+		printf("\n");
+		/* 210/05
+
+		MA 6 800080 fd50c0 0 10a  2 210 7 900 1
+		MA 6 800080 fd50c0 0 3b7  2 210 7 900 1
+		MA 6 800080 fd50c0 0 6f9  2 210 7 900 1
+		MA 6 800080 fd52c0 0 9cd  2 210 7 900 1
+		MA 6 800080 fd50c0 0 d02  2 210 7 900 1
+		MA 6 800080 fd50c0 0 102e  2 210 7 900 1
+		MA 6 800080 fd52c0 0 130e  2 210 7 900 1
+		MA 6 800080 fd50c0 0 16a1  2 210 7 900 1
+		MA 6 800080 fd50c0 0 19da  2 210 7 900 1
+		MA 6 800080 fd52c0 0 1d6b  2 210 7 900 1
+		MA 6 800080 fd50c0 0 20a0  2 210 7 900 1
+		MA 6 800080 fd50c0 0 2435  2 210 7 900 1
+		MA 6 800080 fd52c0 0 2781  2 210 7 900 1
+
+		MiSTer
+
+		MA 0 800080 ffffffff 0 1542  2 10 0 0 0
+		MA 0 800080 0 0 19e1  2 4 0 0 0
+		MA 0 800080 0 0 1deb  2 4 0 0 0
+		MA 0 800080 0 0 21a7  2 4 0 0 0
+		MA 0 800080 0 0 2580  2 4 0 0 0
+		MA 0 800080 0 0 293b  2 4 0 0 0
+		MA 0 800080 0 0 2cdd  2 4 0 0 0
+		MA 0 800080 0 0 30bf  2 4 0 0 0
+		MA 0 800080 0 0 34ae  2 4 0 0 0
+		MA 0 800080 0 0 3896  2 4 0 0 0
+		MA 0 800080 0 0 3c5c  2 4 0 0 0
+		MA 0 800080 0 0 3fda  2 4 0 0 0
+		MA 0 800080 0 0 4383  2 4 0 0 0
+		MA 0 800080 0 0 47a7  2 4 0 0 0
+		MA 0 800080 0 0 4b49  2 4 0 0 0
+		MA 0 800080 0 0 4f4d  2 4 0 0 0
+		MA 0 800080 0 0 5330  2 4 0 0 0
+
+		*/
 
 		ma_dsc_diff = maInfo.MAS_DSC - last_ma_dsc;
 		dclk_diff = dclk - last_dclk;
@@ -444,13 +565,5 @@ int sigCode;
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
 		}
-	}
-	else if ((sigCode & 0xf000) == MA_SIG_BASE)
-	{
-		/* Event coming from MPEG Video driver */
-		static unsigned int wired_or = 0;
-
-		wired_or |= sigCode;
-		printf("A %x %x\n", sigCode, wired_or);
 	}
 }

@@ -2,17 +2,21 @@
 #define _HWREG_H
 
 /* --- FMA ---  */
-#define FMA_CMD (*((unsigned short *)0x0E03000))
-#define FMA_R04 (*((unsigned short *)0x0E03004))
-#define FMA_R06 (*((unsigned short *)0x0E03006))
-#define FMA_STRM (*((unsigned short *)0x0E03008))
-#define FMA_DCLK (*((unsigned long *)0x0E03010))
-#define FMA_RUN (*((unsigned short *)0x0E03018))
-#define FMA_ISR (*((unsigned short *)0x0E0301A))
-#define FMA_IER (*((unsigned short *)0x0E0301C))
+#define FMA_CMD (*((unsigned short *)0x0E03000))    /* typically 2? */
+#define FMA_STATUS (*((unsigned short *)0x0E03002)) /* typically 0x210 */
+#define FMA_R04 (*((unsigned short *)0x0E03004))    /* typically 7?*/
+#define FMA_R06 (*((unsigned short *)0x0E03006))    /* typically 0x900 ?*/
+#define FMA_STRM (*((unsigned short *)0x0E03008))   /* planned stream */
+#define FMA_R0A (*((unsigned short *)0x0E0300A))    /* current stream? */
+#define FMA_IVEC (*((unsigned short *)0x0E0300C))   /* typically 0x807b ? */
+#define FMA_R0E (*((unsigned short *)0x0E0300E))    /* a counter?*/
+#define FMA_DCLK (*((unsigned long *)0x0E03010))    /* only read, 45 kHz counter */
+#define FMA_HDR (*((unsigned long *)0x0E03014))     /* MPEG Audio Header e.g. 0x00fd50c0*/
+#define FMA_RUN (*((unsigned short *)0x0E03018))    /* typically 1 */
+#define FMA_ISR (*((unsigned short *)0x0E0301A))    /* interrupt status */
+#define FMA_IER (*((unsigned short *)0x0E0301C))    /* typically 0x13d or 13f */
 #define FMA_DSPA (*((unsigned short *)0x0E03022))
 #define FMA_DSPD (*((unsigned short *)0x0E03024))
-#define FMA_IVEC (*((unsigned short *)0x0E0300C))
 
 /* --- FMV ---  */
 
