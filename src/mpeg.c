@@ -212,7 +212,7 @@ void FindFmaDriverStruct()
 void playMpeg()
 {
 	int channel = 0;
-	int streamid = 6;
+	int streamid = 0;
 	int m, s, f, lba;
 
 	int i = 0;
@@ -264,7 +264,7 @@ void playMpeg()
 	{
 		/* We are running via serial stub on real hardware and Top Gun Disc? */
 		printf("Serial stub?\n");
-		mpegFile = open("/cd/RTF/application.rtf", _READ);
+		mpegFile = open("/cd/MUSICS/edmusics.rtf", _READ);
 	}
 	DEBUG(mpegFile >= 0);
 
@@ -277,7 +277,7 @@ void playMpeg()
 	lba = CalcLba(9, 23, 52) - CalcLba(1, 0, 62);
 	/* lba = CalcLba(8, 46, 43) - CalcLba(1, 0, 62); */
 	printf("LBA is %d\n", lba);
-	lseek(mpegFile, lba * 2048, 0); /* Seek to beginning */
+	lseek(mpegFile, 0, 0); /* Seek to beginning */
 
 	DEBUG(ss_play(mpegFile, &mpegPcb));
 	printf("Started Play %d at %x at DCLK %x\n", mpegFile, CDIC_TIME, FMA_DCLK);
@@ -450,15 +450,7 @@ int sigCode;
 			   maInfo.MAS_DSC,
 			   dclk);
 
-		if (cnt == 30)
-		{
-			stopMpeg();
-		}
 
-		if (cnt == 60)
-		{
-			stopMpeg();
-		}
 		/*
 		printf("MA %x %d %x %x %x %x\n", sigCode, maInfo.MAS_Stream, FMA_CMD, FMA_R02, FMA_RUN, FMA_IER);
 		*/
