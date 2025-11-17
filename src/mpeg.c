@@ -137,12 +137,25 @@ void initMpegPcls()
 	}
 }
 
+void printMpegPcls()
+{
+	int i;
+	unsigned char *address = mpegDataBuffer;
+	for (i = 0; i < MA_PCL_COUNT; i++)
+	{
+		printf("Sec %x %x %x %x %x %x %x %x\n", address[0], address[1], address[2], address[3], address[4], address[5], address[6], address[7]);
+		address += MPEG_SECTOR_SIZE;
+	}
+}
+
 void initMpeg()
 {
 	initMpegAudio();
 	initMpegVideo();
 
 	mpegDataBuffer = (char *)srqcmem((MV_PCL_COUNT + MA_PCL_COUNT) * MPEG_SECTOR_SIZE, SYSRAM);
+	if (!mpegDataBuffer)
+		exit(0);
 
 	initMpegPcls();
 	initMpegPcb(0);
@@ -220,7 +233,7 @@ void playMpeg()
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
-	mvMapId = mv_create(mvPath, PLAYCD);
+	mvMapId = mv_create(mvPath, PLAYHOST);
 	maMapId = ma_create(maPath, PLAYHOST);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
@@ -268,10 +281,10 @@ void playMpeg()
 	{
 		/* do nothing */
 	}
-
+	/* printMpegPcls(); */
 	printf("Go for host playback!\n");
-	DEBUG(ma_hostplay(maPath, maMapId, MA_PCL_COUNT * MPEG_SECTOR_SIZE, mpegDataBuffer,
-					  0, &maStatus, -2, 0));
+	/* DEBUG(ma_loop(maPath, maMapId, 0, MA_PCL_COUNT * MPEG_SECTOR_SIZE, 1000)); */
+	DEBUG(ma_hostplay(maPath, maMapId, MA_PCL_COUNT * MPEG_SECTOR_SIZE, mpegDataBuffer, 0, &maStatus, MV_NO_SYNC, 0));
 }
 
 void stopMpeg()
@@ -424,10 +437,10 @@ int sigCode;
 				err_cnt++;
 			}
 		}
-
+		/*
 		if (full_cnt > 90)
 			printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
-
+		*/
 		if (full_cnt == MA_PCL_COUNT)
 		{
 			DEBUG(ss_abort(mpegFile));
@@ -454,10 +467,11 @@ int sigCode;
 #if 0
 		if (cnt == 20)
 			ma_cntrl(maPath, maMapId, 0x00800080, 1);
-#endif
 
 		printf("MA %x %x", sigCode,
 			   FMA_STATUS);
+#endif
+		printf("MA %x\n", sigCode);
 
 		/*
 		printf("MA %x %d %x %x %x %x\n", sigCode, maInfo.MAS_Stream, FMA_CMD, FMA_R02, FMA_RUN, FMA_IER);
@@ -467,46 +481,9 @@ int sigCode;
 		{
 			printf("%x ", regs[i]);
 		}
-#endif
 
 		printf("\n");
-		/* 210/05
-
-		MA 6 800080 fd50c0 0 10a  2 210 7 900 1
-		MA 6 800080 fd50c0 0 3b7  2 210 7 900 1
-		MA 6 800080 fd50c0 0 6f9  2 210 7 900 1
-		MA 6 800080 fd52c0 0 9cd  2 210 7 900 1
-		MA 6 800080 fd50c0 0 d02  2 210 7 900 1
-		MA 6 800080 fd50c0 0 102e  2 210 7 900 1
-		MA 6 800080 fd52c0 0 130e  2 210 7 900 1
-		MA 6 800080 fd50c0 0 16a1  2 210 7 900 1
-		MA 6 800080 fd50c0 0 19da  2 210 7 900 1
-		MA 6 800080 fd52c0 0 1d6b  2 210 7 900 1
-		MA 6 800080 fd50c0 0 20a0  2 210 7 900 1
-		MA 6 800080 fd50c0 0 2435  2 210 7 900 1
-		MA 6 800080 fd52c0 0 2781  2 210 7 900 1
-
-		MiSTer
-
-		MA 0 800080 ffffffff 0 1542  2 10 0 0 0
-		MA 0 800080 0 0 19e1  2 4 0 0 0
-		MA 0 800080 0 0 1deb  2 4 0 0 0
-		MA 0 800080 0 0 21a7  2 4 0 0 0
-		MA 0 800080 0 0 2580  2 4 0 0 0
-		MA 0 800080 0 0 293b  2 4 0 0 0
-		MA 0 800080 0 0 2cdd  2 4 0 0 0
-		MA 0 800080 0 0 30bf  2 4 0 0 0
-		MA 0 800080 0 0 34ae  2 4 0 0 0
-		MA 0 800080 0 0 3896  2 4 0 0 0
-		MA 0 800080 0 0 3c5c  2 4 0 0 0
-		MA 0 800080 0 0 3fda  2 4 0 0 0
-		MA 0 800080 0 0 4383  2 4 0 0 0
-		MA 0 800080 0 0 47a7  2 4 0 0 0
-		MA 0 800080 0 0 4b49  2 4 0 0 0
-		MA 0 800080 0 0 4f4d  2 4 0 0 0
-		MA 0 800080 0 0 5330  2 4 0 0 0
-
-		*/
+#endif
 
 		ma_dsc_diff = maInfo.MAS_DSC - last_ma_dsc;
 		dclk_diff = dclk - last_dclk;
