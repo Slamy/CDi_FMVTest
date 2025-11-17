@@ -42,22 +42,22 @@ link_cd: $(FILES)
 	$(LD) -z=link.txt -o=build\$(NAME)
 	fixmod -uo=0.0 $(BUILD)/$(NAME)
 
-$(OUTPUT)/cdio.r : $(SRC)/cdio.c
+$(OUTPUT)/cdio.r : $(SRC)/cdio.c *.h
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/cdio.c
 
-$(OUTPUT)/graphics.r : $(SRC)/graphics.c
+$(OUTPUT)/graphics.r : $(SRC)/graphics.c *.h
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/graphics.c
 
-$(OUTPUT)/input.r : $(SRC)/input.c
+$(OUTPUT)/input.r : $(SRC)/input.c *.h
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/input.c
 
-$(OUTPUT)/main.r : $(SRC)/main.c
+$(OUTPUT)/main.r : $(SRC)/main.c *.h
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/main.c
 
-$(OUTPUT)/mpeg.r : $(SRC)/mpeg.c
+$(OUTPUT)/mpeg.r : $(SRC)/mpeg.c *.h
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/mpeg.c
 
-$(OUTPUT)/video.r : $(SRC)/video.c
+$(OUTPUT)/video.r : $(SRC)/video.c *.h
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/video.c
 
 

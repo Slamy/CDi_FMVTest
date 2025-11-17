@@ -468,10 +468,16 @@ int sigCode;
 		if (cnt == 20)
 			ma_cntrl(maPath, maMapId, 0x00800080, 1);
 
-		printf("MA %x %x", sigCode,
-			   FMA_STATUS);
 #endif
-		printf("MA %x\n", sigCode);
+
+		printf("MA %x %x %x %x %x %x %x\n", sigCode,
+			   maInfo.MAS_Stream,
+			   maInfo.MAS_Att,
+			   maInfo.MAS_Head,
+			   maInfo.MAS_CurAdr,
+			   maInfo.MAS_DSC,
+			   dclk);
+fd8284
 
 		/*
 		printf("MA %x %d %x %x %x %x\n", sigCode, maInfo.MAS_Stream, FMA_CMD, FMA_R02, FMA_RUN, FMA_IER);
