@@ -26,9 +26,10 @@ int mpegStatus;
 int maPath, mvPath, maMapId, mvMapId;
 
 static int mpegFile = -1;
+static int collected_buffers = 0;
 
 static PCB mpegPcb;
-static PCL mvPcl[MV_PCL_COUNT];
+static PCL mvPcl[1];
 static PCL maPcl[MA_PCL_COUNT];
 static PCL *mvCil[32];
 static PCL *maCil[16];
@@ -80,7 +81,7 @@ void initMpegPcb(channel) int channel;
 	mpegPcb.PCB_Sig = MPEG_SIG_PCB;
 	mpegPcb.PCB_Chan = 0xffffffff;
 	mpegPcb.PCB_AChan = 0;
-	mpegPcb.PCB_Rec = 1; /* assume that there is only 1 EOR */
+	mpegPcb.PCB_Rec = 1000; /* assume that there is only 1 EOR */
 	mpegPcb.PCB_Stat = 0;
 
 	mvStatus.asy_stat = 0;
@@ -220,7 +221,7 @@ void playMpeg()
 
 	/* Create FMV maps */
 	mvMapId = mv_create(mvPath, PLAYCD);
-	maMapId = ma_create(maPath, PLAYCD);
+	maMapId = ma_create(maPath, PLAYHOST);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
 	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
@@ -249,15 +250,6 @@ void playMpeg()
 
 	mpegStatus = MPP_INIT;
 
-	/* Setup MPEG Playback */
-#ifdef ENABLE_VIDEO
-	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
-#endif
-
-#ifdef ENABLE_AUDIO
-	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
-#endif
-
 	/* Assume we are not running from serial stub first */
 	mpegFile = open("/cd/VIDEO01.RTF", _READ);
 	if (mpegFile < 0)
@@ -268,19 +260,18 @@ void playMpeg()
 	}
 	DEBUG(mpegFile >= 0);
 
-	/*
-	01:00:62 At 0
-	08:46:43 Seems to be working intro talk
-	10:20:74 Cut off music
-	09:23:52 Böööh
-	*/
-	lba = CalcLba(9, 23, 52) - CalcLba(1, 0, 62);
-	/* lba = CalcLba(8, 46, 43) - CalcLba(1, 0, 62); */
-	printf("LBA is %d\n", lba);
 	lseek(mpegFile, 0, 0); /* Seek to beginning */
-
 	DEBUG(ss_play(mpegFile, &mpegPcb));
-	printf("Started Play %d at %x at DCLK %x\n", mpegFile, CDIC_TIME, FMA_DCLK);
+	printf("Started grabbing data %d at %x at DCLK %x\n", mpegFile, CDIC_TIME, FMA_DCLK);
+
+	while (!collected_buffers)
+	{
+		/* do nothing */
+	}
+
+	printf("Go for host playback!\n");
+	DEBUG(ma_hostplay(maPath, maMapId, MA_PCL_COUNT * MPEG_SECTOR_SIZE, mpegDataBuffer,
+					  0, &maStatus, -2, 0));
 }
 
 void stopMpeg()
@@ -359,7 +350,24 @@ int sigCode;
 	if (sigCode == MPEG_SIG_PCB)
 	{
 		/* Occurs when playback has finished */
-		printf("PCB %x %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat, CDIC_TIME);
+
+		/* Check for buffers */
+		int full_cnt = 0;
+		int err_cnt = 0;
+		int i;
+		/* printf("PCB %x %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat, CDIC_TIME); */
+
+		for (i = 0; i < MA_PCL_COUNT; i++)
+		{
+			if (maPcl[i].PCL_Ctrl & 0x01)
+			{
+				full_cnt++;
+			}
+			if (maPcl[i].PCL_Ctrl & 0x80)
+			{
+				err_cnt++;
+			}
+		}
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
@@ -417,8 +425,14 @@ int sigCode;
 			}
 		}
 
-		if (full_cnt > 2)
+		if (full_cnt > 90)
 			printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
+
+		if (full_cnt == MA_PCL_COUNT)
+		{
+			DEBUG(ss_abort(mpegFile));
+			collected_buffers = 1;
+		}
 	}
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
@@ -442,14 +456,8 @@ int sigCode;
 			ma_cntrl(maPath, maMapId, 0x00800080, 1);
 #endif
 
-		printf("MA %x %x %x %x %x %x %x", sigCode,
-			   maInfo.MAS_Stream,
-			   maInfo.MAS_Att,
-			   maInfo.MAS_Head,
-			   maInfo.MAS_CurAdr,
-			   maInfo.MAS_DSC,
-			   dclk);
-
+		printf("MA %x %x", sigCode,
+			   FMA_STATUS);
 
 		/*
 		printf("MA %x %d %x %x %x %x\n", sigCode, maInfo.MAS_Stream, FMA_CMD, FMA_R02, FMA_RUN, FMA_IER);
