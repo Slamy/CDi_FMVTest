@@ -223,6 +223,8 @@ void FindFmaDriverStruct()
 	}
 }
 
+int playbackpos = 0;
+
 void playMpeg()
 {
 	int channel = 0;
@@ -284,7 +286,8 @@ void playMpeg()
 	/* printMpegPcls(); */
 	printf("Go for host playback!\n");
 	/* DEBUG(ma_loop(maPath, maMapId, 0, MA_PCL_COUNT * MPEG_SECTOR_SIZE, 1000)); */
-	DEBUG(ma_hostplay(maPath, maMapId, MA_PCL_COUNT * MPEG_SECTOR_SIZE, mpegDataBuffer, 0, &maStatus, MV_NO_SYNC, 0));
+	playbackpos = 0;
+	DEBUG(ma_hostplay(maPath, maMapId, MPEG_SECTOR_SIZE * 3, mpegDataBuffer, 0, &maStatus, MV_NO_SYNC, 0));
 }
 
 void stopMpeg()
@@ -460,7 +463,6 @@ int sigCode;
 		unsigned short *regs = ((unsigned short *)0x0E03000);
 
 		static int cnt = 0;
-		DEBUG(ma_status(maPath, &maInfo));
 
 		cnt++;
 
@@ -470,6 +472,7 @@ int sigCode;
 
 #endif
 
+#if 0
 		printf("MA %x %x %x %x %x %x %x\n", sigCode,
 			   maInfo.MAS_Stream,
 			   maInfo.MAS_Att,
@@ -477,7 +480,22 @@ int sigCode;
 			   maInfo.MAS_CurAdr,
 			   maInfo.MAS_DSC,
 			   dclk);
-fd8284
+#else
+		/* printf("MA %x\n", sigCode); */
+#endif
+		if (sigCode & 8)
+		{
+			ma_cntrl(maPath, maMapId, 0x00800080, 0);
+			playbackpos++;
+			if (playbackpos >= 33)
+				playbackpos = 0;
+
+			DEBUG(ma_hostplay(maPath, maMapId, MPEG_SECTOR_SIZE * 3, mpegDataBuffer + playbackpos * MPEG_SECTOR_SIZE * 3, 0, &maStatus, MV_NO_SYNC, 0));
+		}
+		else
+		{
+			/* DEBUG(ma_status(maPath, &maInfo)); */
+		}
 
 		/*
 		printf("MA %x %d %x %x %x %x\n", sigCode, maInfo.MAS_Stream, FMA_CMD, FMA_R02, FMA_RUN, FMA_IER);
