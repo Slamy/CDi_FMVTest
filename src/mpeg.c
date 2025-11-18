@@ -44,8 +44,6 @@ char *mpegDataBuffer;
 void initMpegAudio()
 {
 	char *devName = csd_devname(DT_MPEGA, 1); /* Get MPEG Audio Device Name */
-	printf("status %x\n", FMA_STATUS);
-
 	maPath = open(devName, 0); /* Open MPEG Audio Device */
 	free(devName);			   /* Release memory */
 }
@@ -221,7 +219,6 @@ void playMpeg()
 	int m, s, f, lba;
 	int i = 0;
 	mpegStatus = MPP_STOP;
-	printf("status %x\n", FMA_STATUS);
 
 	/* Create FMV maps */
 	mvMapId = mv_create(mvPath, PLAYCD);
@@ -253,7 +250,6 @@ void playMpeg()
 	initMpegPcb(channel);
 
 	mpegStatus = MPP_INIT;
-	printf("status %x\n", FMA_STATUS);
 	/* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
 	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
@@ -262,7 +258,6 @@ void playMpeg()
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
 #endif
-	printf("status %x\n", FMA_STATUS);
 
 	/* Assume we are not running from serial stub first */
 	mpegFile = open("/cd/VIDEO01.RTF", _READ);
@@ -276,7 +271,6 @@ void playMpeg()
 
 	lseek(mpegFile, CalcLba(0, 12, 0) * 2048, 0); /* Seek to beginning */
 	DEBUG(ss_play(mpegFile, &mpegPcb));
-	printf("status %x\n", FMA_STATUS);
 	printf("Started Play %d at %x at DCLK %x\n", mpegFile, CDIC_TIME, FMA_DCLK);
 }
 
@@ -356,8 +350,6 @@ int sigCode;
 	if (sigCode == MPEG_SIG_PCB)
 	{
 		/* Occurs when playback has finished */
-		unsigned int status = FMA_STATUS;
-
 		/* printf("PCB %x %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat, status); */
 	}
 	else if (sigCode == MA_SIG_STAT)
@@ -405,7 +397,6 @@ int sigCode;
 		unsigned long dclk_diff;
 		unsigned short *regs = ((unsigned short *)0x0E03000);
 		static int cd_is_paused = 0;
-		unsigned int status = FMA_STATUS;
 
 		int full_cnt = 0;
 		int err_cnt = 0;
