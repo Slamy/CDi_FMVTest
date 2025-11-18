@@ -2,7 +2,7 @@
 #define __MPEG_H__
 
 #define MV_PCL_COUNT 0
-#define MA_PCL_COUNT 20
+#define MA_PCL_COUNT 200
 #define MPEG_SECTOR_SIZE 2304
 #define MPEG_CHANNEL 0
 

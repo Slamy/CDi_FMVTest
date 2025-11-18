@@ -40,7 +40,6 @@ static STAT_BLK maStatus;
 static MVmapDesc *mvDesc;
 
 char *mpegDataBuffer;
-char *audioLoopBuffer;
 
 void initMpegAudio()
 {
@@ -82,7 +81,7 @@ void initMpegPcb(channel) int channel;
 	mpegPcb.PCB_Sig = MPEG_SIG_PCB;
 	mpegPcb.PCB_Chan = 0xffffffff;
 	mpegPcb.PCB_AChan = 0;
-	mpegPcb.PCB_Rec = 1000; /* assume that there is only 1 EOR */
+	mpegPcb.PCB_Rec = 200000; /* assume that there is only 1 EOR */
 	mpegPcb.PCB_Stat = 0;
 
 	mvStatus.asy_stat = 0;
@@ -138,20 +137,6 @@ void initMpegPcls()
 	}
 }
 
-void printMpegPcls()
-{
-	int i;
-	unsigned char *address = mpegDataBuffer;
-	for (i = 0; i < MA_PCL_COUNT; i++)
-	{
-		printf("Sec %x %x %x %x %x %x %x %x\n", address[0], address[1], address[2], address[3], address[4], address[5], address[6], address[7]);
-		address += MPEG_SECTOR_SIZE;
-	}
-}
-
-#define AUDIO_LOOP_SIZE 8
-#define AUDIO_LOOP_MASK 0x7
-
 void initMpeg()
 {
 	initMpegAudio();
@@ -159,10 +144,6 @@ void initMpeg()
 
 	mpegDataBuffer = (char *)srqcmem((MV_PCL_COUNT + MA_PCL_COUNT) * MPEG_SECTOR_SIZE, SYSRAM);
 	if (!mpegDataBuffer)
-		exit(0);
-
-	audioLoopBuffer = (char *)srqcmem(AUDIO_LOOP_SIZE * MPEG_SECTOR_SIZE, SYSRAM);
-	if (!audioLoopBuffer)
 		exit(0);
 
 	initMpegPcls();
@@ -233,10 +214,6 @@ void FindFmaDriverStruct()
 
 void playMpeg()
 {
-	unsigned int loopwriteindex = 0;
-	unsigned int loopreadindex = 0;
-	unsigned int playbackpos = 4;
-
 	int channel = 0;
 	int streamid = 0;
 	int m, s, f, lba;
@@ -245,8 +222,8 @@ void playMpeg()
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
-	mvMapId = mv_create(mvPath, PLAYHOST);
-	maMapId = ma_create(maPath, PLAYHOST);
+	mvMapId = mv_create(mvPath, PLAYCD);
+	maMapId = ma_create(maPath, PLAYCD);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
 	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
@@ -275,6 +252,15 @@ void playMpeg()
 
 	mpegStatus = MPP_INIT;
 
+	/* Setup MPEG Playback */
+#ifdef ENABLE_VIDEO
+	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
+#endif
+
+#ifdef ENABLE_AUDIO
+	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
+#endif
+
 	/* Assume we are not running from serial stub first */
 	mpegFile = open("/cd/VIDEO01.RTF", _READ);
 	if (mpegFile < 0)
@@ -287,37 +273,7 @@ void playMpeg()
 
 	lseek(mpegFile, 0, 0); /* Seek to beginning */
 	DEBUG(ss_play(mpegFile, &mpegPcb));
-	printf("Started grabbing data %d at %x at DCLK %x\n", mpegFile, CDIC_TIME, FMA_DCLK);
-
-	while (!collected_buffers)
-	{
-		/* do nothing */
-	}
-	/* printMpegPcls(); */
-	printf("Go for host playback!\n");
-	/* Put initial AUDIO_LOOP_SIZE sectors in loop */
-	memcpy(audioLoopBuffer, mpegDataBuffer, AUDIO_LOOP_SIZE * MPEG_SECTOR_SIZE);
-	DEBUG(ma_loop(maPath, maMapId, 0 * MPEG_SECTOR_SIZE, AUDIO_LOOP_SIZE * MPEG_SECTOR_SIZE, 1000));
-	DEBUG(ma_hostplay(maPath, maMapId, MA_PCL_COUNT * MPEG_SECTOR_SIZE, audioLoopBuffer, 0, &maStatus, MV_NO_SYNC, 0));
-
-	loopwriteindex = 0;
-	loopreadindex = 0;
-	playbackpos = AUDIO_LOOP_SIZE;
-	while (playbackpos < MA_PCL_COUNT)
-	{
-		MA_status maInfo;
-		unsigned int distance;
-		DEBUG(ma_status(maPath, &maInfo));
-		loopreadindex = maInfo.MAS_CurAdr / 0x900;
-		distance = (loopreadindex - loopwriteindex) & AUDIO_LOOP_MASK;
-		if (distance > 3)
-		{
-			/* printf("C %d %d\n", loopwriteindex, loopreadindex); */
-			memcpy(audioLoopBuffer + loopwriteindex * MPEG_SECTOR_SIZE, mpegDataBuffer + playbackpos * MPEG_SECTOR_SIZE, MPEG_SECTOR_SIZE);
-			playbackpos++;
-			loopwriteindex = (loopwriteindex + 1) & AUDIO_LOOP_MASK;
-		}
-	}
+	printf("Started Play %d at %x at DCLK %x\n", mpegFile, CDIC_TIME, FMA_DCLK);
 }
 
 void stopMpeg()
@@ -396,24 +352,7 @@ int sigCode;
 	if (sigCode == MPEG_SIG_PCB)
 	{
 		/* Occurs when playback has finished */
-
-		/* Check for buffers */
-		int full_cnt = 0;
-		int err_cnt = 0;
-		int i;
 		/* printf("PCB %x %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat, CDIC_TIME); */
-
-		for (i = 0; i < MA_PCL_COUNT; i++)
-		{
-			if (maPcl[i].PCL_Ctrl & 0x01)
-			{
-				full_cnt++;
-			}
-			if (maPcl[i].PCL_Ctrl & 0x80)
-			{
-				err_cnt++;
-			}
-		}
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
@@ -425,33 +364,6 @@ int sigCode;
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
-		/* Check for buffers */
-		int full_cnt = 0;
-		int err_cnt = 0;
-		static int reduce_print_cnt = 0;
-		int i;
-		for (i = 0; i < MV_PCL_COUNT; i++)
-		{
-			if (mvPcl[i].PCL_Ctrl & 0x01)
-			{
-				full_cnt++;
-			}
-			if (mvPcl[i].PCL_Ctrl & 0x80)
-			{
-				err_cnt++;
-			}
-		}
-		/* Buffers should never fill. Report via console if it happens */
-
-		reduce_print_cnt++;
-		if (full_cnt > 2)
-			printf("MV %d %d\n", full_cnt, FMV_PICS_IN_FIFO);
-		/*
-		if (full_cnt == 1)
-		{
-			#define CDIC_TIME (*((unsigned long *)0x303C02))
-			printf("TIME %lx\n", CDIC_TIME);
-		}*/
 	}
 	else if (sigCode == MA_SIG_PCL)
 	{
@@ -474,11 +386,6 @@ int sigCode;
 		if (full_cnt > 90)
 			printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 		*/
-		if (full_cnt == MA_PCL_COUNT)
-		{
-			DEBUG(ss_abort(mpegFile));
-			collected_buffers = 1;
-		}
 	}
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
@@ -490,20 +397,39 @@ int sigCode;
 		unsigned long dclk = FMA_DCLK;
 		int ma_dsc_diff;
 		unsigned long dclk_diff;
-		int i;
 		unsigned short *regs = ((unsigned short *)0x0E03000);
+		static int cd_is_paused = 0;
 
-		static int cnt = 0;
+		int full_cnt = 0;
+		int err_cnt = 0;
+		int i;
+		for (i = 0; i < MA_PCL_COUNT; i++)
+		{
+			if (maPcl[i].PCL_Ctrl & 0x01)
+			{
+				full_cnt++;
+			}
+			if (maPcl[i].PCL_Ctrl & 0x80)
+			{
+				err_cnt++;
+			}
+		}
+
 		/* DEBUG(ma_status(maPath, &maInfo)); */
 		/* audiomap = ma_info(maPath, maMapId);*/
-		cnt++;
+		if (full_cnt >= 100 && !cd_is_paused)
+		{
+			printf("pause!\n");
+			DEBUG(ss_pause(mpegFile));
+			cd_is_paused = 1;
+		}
 
-#if 0
-		if (cnt == 20)
-			ma_cntrl(maPath, maMapId, 0x00800080, 1);
-
-#endif
-		/*loopreadindex = maInfo.MAS_CurAdr / 0x900; */
+		if (full_cnt <= 50 && cd_is_paused)
+		{
+			printf("cont!\n");
+			DEBUG(ss_cont(mpegFile));
+			cd_is_paused = 0;
+		}
 #if 0
 		/*printf("MA %x %x %x %x %x %x\n", sigCode,
 			   audiomap->MD_EnLoop,
@@ -512,7 +438,8 @@ int sigCode;
 			   audiomap->MD_LCntr,
 			   maInfo.MAS_CurAdr);*/
 #else
-		printf("MA %x\n", sigCode);
+		if (sigCode != 0xc004)
+			printf("MA %x %d\n", sigCode, full_cnt);
 #endif
 
 		/*
