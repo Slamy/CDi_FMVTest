@@ -149,8 +149,8 @@ void printMpegPcls()
 	}
 }
 
-#define AUDIO_LOOP_SIZE 16
-#define AUDIO_LOOP_MASK 0xf
+#define AUDIO_LOOP_SIZE 8
+#define AUDIO_LOOP_MASK 0x7
 
 void initMpeg()
 {
@@ -295,9 +295,9 @@ void playMpeg()
 	}
 	/* printMpegPcls(); */
 	printf("Go for host playback!\n");
-	DEBUG(ma_loop(maPath, maMapId, 0 * MPEG_SECTOR_SIZE, AUDIO_LOOP_SIZE * MPEG_SECTOR_SIZE, 1000));
 	/* Put initial AUDIO_LOOP_SIZE sectors in loop */
 	memcpy(audioLoopBuffer, mpegDataBuffer, AUDIO_LOOP_SIZE * MPEG_SECTOR_SIZE);
+	DEBUG(ma_loop(maPath, maMapId, 0 * MPEG_SECTOR_SIZE, AUDIO_LOOP_SIZE * MPEG_SECTOR_SIZE, 1000));
 	DEBUG(ma_hostplay(maPath, maMapId, MA_PCL_COUNT * MPEG_SECTOR_SIZE, audioLoopBuffer, 0, &maStatus, MV_NO_SYNC, 0));
 
 	loopwriteindex = 0;
@@ -312,7 +312,7 @@ void playMpeg()
 		distance = (loopreadindex - loopwriteindex) & AUDIO_LOOP_MASK;
 		if (distance > 3)
 		{
-			printf("C %d %d\n", loopwriteindex, loopreadindex);
+			/* printf("C %d %d\n", loopwriteindex, loopreadindex); */
 			memcpy(audioLoopBuffer + loopwriteindex * MPEG_SECTOR_SIZE, mpegDataBuffer + playbackpos * MPEG_SECTOR_SIZE, MPEG_SECTOR_SIZE);
 			playbackpos++;
 			loopwriteindex = (loopwriteindex + 1) & AUDIO_LOOP_MASK;
@@ -504,7 +504,7 @@ int sigCode;
 
 #endif
 		/*loopreadindex = maInfo.MAS_CurAdr / 0x900; */
-#if 1
+#if 0
 		/*printf("MA %x %x %x %x %x %x\n", sigCode,
 			   audiomap->MD_EnLoop,
 			   audiomap->MD_StLoop,

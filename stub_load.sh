@@ -4,7 +4,8 @@ set -e
 WINEPATH=D:/DOS/BIN wine D:/dos/bin/bmake.exe link_app
 
 # Stop previous execution if already running by sending Ctrl+C
-stty -F /dev/ttyUSB0 9600 raw
+stty -F /dev/ttyUSB0 9600 || stty -F /dev/ttyUSB0 9600 
+
 echo -ne '\x03' > /dev/ttyUSB0
 # The CD-i will now reset
 
