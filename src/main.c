@@ -43,7 +43,7 @@ void closeSystem()
 void runProgram()
 {
 	int evId = _ev_link("line_event");
-
+	int cnt=0;
 	setIcf(ICF_MAX, ICF_MAX);
 	while (1)
 	{
@@ -54,6 +54,7 @@ void runProgram()
 		}
 
 		_ev_wait(evId, 1, 1); /* Wait for VBLANK */
+		printf("X %d\n",cnt++);
 	}
 }
 
