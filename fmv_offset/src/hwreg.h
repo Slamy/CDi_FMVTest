@@ -19,6 +19,7 @@
 #define FMV_IMGSZ (*((unsigned long *)0x0E04002))
 #define FMV_IMGRT (*((unsigned short *)0x0E04006))
 
+#define FMV_SYS_PRPA (*((unsigned short *)0x0E04056))
 #define FMV_R5E (*((unsigned short *)0x0E0405E)) /* STS */
 #define FMV_IER (*((unsigned short *)0x0E04060))
 #define FMV_ISR (*((unsigned short *)0x0E04062))

@@ -57,7 +57,7 @@ Keep in mind that MAME currently has no DVC emulation! It won't work!
 
 ### Start image on cdiemu
 
-	wine wcdiemu-v053b7.exe disk/FMVTEST.CDI -playcdi -start
+	wine wcdiemu-v053b9.exe disk/FMVTEST.CDI -playcdi -start
 
 ### Start application via stub loader
 

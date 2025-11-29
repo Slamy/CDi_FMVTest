@@ -13,13 +13,11 @@ define
 	message							from "BUILD/MESSAGE.TXT"
 
 	application file	MainApp     from "BUILD/FMVTEST"
-	green       file    videoRtf    from record real_time mpeg vid01 in channel 0 from "BUILD/VIDEO01.MMD" eors at vid01.last
 
 {
 	"COPYRGHT.TXT"	owner 0.0 protection 0x111	from	Copyright
 	"ABSTRACT.TXT"	owner 0.0 protection 0x111	from	Abstract
 	"BIBLIOGR.TXT"	owner 0.0 protection 0x111	from	Biblio
 	"CDI_FMVTEST"   owner 0.0 protection 0x555	from	MainApp
-	"VIDEO01.RTF"	owner 0.0 protection 0x111	from    videoRtf
 }
 

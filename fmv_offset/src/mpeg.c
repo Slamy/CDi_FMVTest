@@ -9,9 +9,9 @@
 
 #include "mpeg.h"
 #include "hwreg.h"
+#include "cross_mpg.h"
 
 /* Have at least one of them enabled! */
-#define ENABLE_AUDIO
 #define ENABLE_VIDEO
 
 extern int errno;
@@ -155,11 +155,12 @@ void initMpeg()
 void playMpeg(path, channel) char *path;
 int channel;
 {
+	int mv_host_size;
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
-	mvMapId = mv_create(mvPath, PLAYCD);
-	maMapId = ma_create(maPath, PLAYCD);
+	mvMapId = mv_create(mvPath, PLAYHOST);
+	maMapId = ma_create(maPath, PLAYHOST);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
 	printf("playMpeg %s %d - %d %d\n", path, channel, maMapId, mvMapId);
@@ -170,6 +171,7 @@ int channel;
 	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
 	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
+	DEBUG(mv_show(mvPath, 0));
 
 #ifdef ENABLE_AUDIO
 	/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
@@ -185,18 +187,15 @@ int channel;
 
 	/* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
-	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
+	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_mpg_len, cross_mpg, 0, &mvStatus, MV_NO_SYNC, 0));
+	/* DEBUG(mv_hostnext(mvPath, mvMapId)); */ /* Not sure if this is needed */
 #endif
 
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
 #endif
 
-	/* Open file, start play */
-	mpegFile = open(path, _READ);
-	lseek(mpegFile, 0, 0); /* Seek to beginning */
-	DEBUG(ss_play(mpegFile, &mpegPcb));
-	printf("Started Play %s %d\n", path, mpegFile);
+	printf("Started Play %s at %x\n", path, cross_mpg);
 }
 
 void stopMpeg()
@@ -239,28 +238,12 @@ void mpegPic()
 	offsetX = (768 - width) / 2;
 	offsetY = (560 - height) / 2;
 
-	printf("PIC: %d %d - %d %d\n", width, height, offsetX, offsetY);
+	printf("PIC: %d %d - %d %d  %x %x %x\n", width, height, offsetX, offsetY, FMV_IMGRT, FMV_SYS_PRPA, FMV_RC6);
 
-	DEBUG(mv_pos(mvPath, mvMapId, offsetX, offsetY, 0));
-	DEBUG(mv_window(mvPath, mvMapId, 0, 0, width, height, 0));
+	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
+	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
+
 	DEBUG(mv_show(mvPath, 0));
-
-#ifdef ENABLE_AUDIO
-	/* Setup volume */
-	DEBUG(ma_status(maPath, &maInfo));
-
-	printf("AUDIO: %X\n", maInfo.MAS_Head);
-	if ((maInfo.MAS_Head & MA_AUD_MODE) == MA_AUD_STEREO)
-	{
-		/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
-		ma_cntrl(maPath, maMapId, 0x00800080, 0L);
-	}
-	else
-	{
-		/* LtoL=MUTE: LtoR=MUTE: RtoR=LOUD: RtoL=LOUD */
-		ma_cntrl(maPath, maMapId, 0x80800000, 0L);
-	}
-#endif
 
 	mpegStatus = MPP_PLAY;
 }
@@ -285,77 +268,45 @@ int sigCode;
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
-		/* Check for buffers */
-		int full_cnt = 0;
-		int err_cnt = 0;
-		int i;
-		for (i = 0; i < MV_PCL_COUNT; i++)
-		{
-			if (mvPcl[i].PCL_Ctrl & 0x01)
-			{
-				full_cnt++;
-			}
-			if (mvPcl[i].PCL_Ctrl & 0x80)
-			{
-				err_cnt++;
-			}
-		}
-		/* Buffers should never fill. Report via console if it happens */
-		if (full_cnt > 5)
-			printf("MV %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 	}
 	else if (sigCode == MA_SIG_PCL)
 	{
-		/* Check for buffers */
-		int full_cnt = 0;
-		int err_cnt = 0;
-		int i;
-		for (i = 0; i < MA_PCL_COUNT; i++)
-		{
-			if (maPcl[i].PCL_Ctrl & 0x01)
-			{
-				full_cnt++;
-			}
-			if (maPcl[i].PCL_Ctrl & 0x80)
-			{
-				err_cnt++;
-			}
-		}
-
-		if (full_cnt > 5)
-			printf("MA %x %d %d\n", mpegPcb.PCB_Stat, full_cnt, err_cnt);
 	}
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
-		/* Event coming from MPEG Audio driver */
-		static unsigned long last_dclk = 0;
-		static int last_ma_dsc = 0;
-		MA_status maInfo;
-		unsigned long dclk = FMA_DCLK;
-		int ma_dsc_diff;
-		unsigned long dclk_diff;
-
-		DEBUG(ma_status(maPath, &maInfo));
-
-		ma_dsc_diff = maInfo.MAS_DSC - last_ma_dsc;
-		dclk_diff = dclk - last_dclk;
-
-		if (sigcnt < 20)
-		{
-			printf("MA %d %x %x %d %d\n", sigcnt, sigCode,
-				   maInfo.MAS_Head, ma_dsc_diff, dclk_diff);
-		}
-		last_dclk = dclk;
-		last_ma_dsc = maInfo.MAS_DSC;
-		sigcnt++;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
+		printf("MV %x\n", sigCode);
+
 		/* Event coming from MPEG Video driver */
-		if (sigCode & MV_TRIG_PIC)
-		{
-			if (mpegStatus == MPP_INIT)
-				mpegPic();
-		}
+		mpegPic();
 	}
 }
+
+/*
+Expected output
+MV b200   0 3000230 0 0 c800c8
+PIC: 200 200 - 284 180
+MV b180   0 c800c8 11c00b4 0 c800c8
+PIC: 200 200 - 284 180
+MV b100   0 c800c8 11c00b4 0 c800c8
+PIC: 200 200 - 284 180
+MV b010   0 c800c8 11c00b4 0 c800c8
+PIC: 200 200 - 284 180
+MV2 391
+
+On MiSTer
+
+Video: LI="625": 0
+InitMPEG 4 5 - D0004A D00066 - D00862 D0004A
+Starting FMV
+playMpeg /cd/VIDEO01.RTF 0 - 1 1
+Started Play /cd/VIDEO01.RTF at d01376
+MV b080   0 30001e0 0 0 30001e0
+PIC 30001e0 30001e0 0 0 0
+MV b010   0 30001e0 0 0 30001e0
+PIC 30001e0 30001e0 0 0 0
+MV2 91
+
+*/

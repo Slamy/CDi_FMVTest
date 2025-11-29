@@ -23,6 +23,12 @@
 
 #define MA_SIG_BASE 0xC000 /* Signal base */
 
+#define MA_TRIG_EOI 0x0001
+#define MA_TRIG_CSU 0x0002
+#define MA_TRIG_UPD 0x0004
+#define MA_TRIG_UNF 0x0008
+#define MA_TRIG_DEC 0x0010
+
 /* literals for the different signal mechanism */
 #define MV_SIG_BASE 0xB000 /* Signal base */
 #define MV_TRIG_DER 0x0001 /* Data Error */
