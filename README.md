@@ -4,8 +4,12 @@ A collection of example applications to utilize the MPEG hardware of the Philips
 
 The applications are designed to be played from disc and loaded via serial stub
 
-[Playing Big Buck Bunny](big_buck_bunny/)
-[Offset between FMV and Base case](fmv_offset)
+* [Playing Big Buck Bunny](big_buck_bunny/)
+* [Offset between FMV and Base case](fmv_offset/)
+* [Playback of music from Lost Eden disk](lost_eden_music/)
+
+The intention of this project is to be helpful for emulator developers as well,
+since the source code can be augmented with debugging prints.
 
 ## Compiling under Linux
 

@@ -1,25 +1,30 @@
 #ifndef _HWREG_H
 #define _HWREG_H
 
+#define VMPEG_VCD (*((unsigned short *)0x0E01000))
+
 /* --- FMA ---  */
-#define FMA_CMD (*((unsigned short *)0x0E03000))
-#define FMA_R04 (*((unsigned short *)0x0E03004))
-#define FMA_R06 (*((unsigned short *)0x0E03006))
-#define FMA_STRM (*((unsigned short *)0x0E03008))
-#define FMA_DCLK (*((unsigned long *)0x0E03010))
-#define FMA_RUN (*((unsigned short *)0x0E03018))
-#define FMA_ISR (*((unsigned short *)0x0E0301A))
-#define FMA_IER (*((unsigned short *)0x0E0301C))
+#define FMA_CMD (*((unsigned short *)0x0E03000))    /* typically 2? */
+#define FMA_STATUS (*((unsigned short *)0x0E03002)) /* typically 0x210 */
+#define FMA_R04 (*((unsigned short *)0x0E03004))    /* typically 7?*/
+#define FMA_R06 (*((unsigned short *)0x0E03006))    /* typically 0x900 ?*/
+#define FMA_STRM (*((unsigned short *)0x0E03008))   /* planned stream */
+#define FMA_R0A (*((unsigned short *)0x0E0300A))    /* current stream? */
+#define FMA_IVEC (*((unsigned short *)0x0E0300C))   /* typically 0x807b ? */
+#define FMA_R0E (*((unsigned short *)0x0E0300E))    /* a counter?*/
+#define FMA_DCLK (*((unsigned long *)0x0E03010))    /* only read, 45 kHz counter */
+#define FMA_HDR (*((unsigned long *)0x0E03014))     /* MPEG Audio Header e.g. 0x00fd50c0*/
+#define FMA_RUN (*((unsigned short *)0x0E03018))    /* typically 1 */
+#define FMA_ISR (*((unsigned short *)0x0E0301A))    /* interrupt status */
+#define FMA_IER (*((unsigned short *)0x0E0301C))    /* typically 0x13d or 13f */
 #define FMA_DSPA (*((unsigned short *)0x0E03022))
 #define FMA_DSPD (*((unsigned short *)0x0E03024))
-#define FMA_IVEC (*((unsigned short *)0x0E0300C))
 
 /* --- FMV ---  */
 
 #define FMV_IMGSZ (*((unsigned long *)0x0E04002))
 #define FMV_IMGRT (*((unsigned short *)0x0E04006))
 
-#define FMV_SYS_PRPA (*((unsigned short *)0x0E04056))
 #define FMV_R5E (*((unsigned short *)0x0E0405E)) /* STS */
 #define FMV_IER (*((unsigned short *)0x0E04060))
 #define FMV_ISR (*((unsigned short *)0x0E04062))
@@ -35,12 +40,16 @@
 
 #define FMV_RF2 (*((unsigned short *)0x0E040F2))
 #define FMV_RF4 (*((unsigned short *)0x0E040F4))
-#define FMV_R9C (*((unsigned short *)0x0E0409C))
+#define FMV_GEN_SYNC_DIFF (*((unsigned short *)0x0E0409C))
 #define FMV_R92 (*((unsigned short *)0x0E04092))
 #define FMV_RC6 (*((unsigned short *)0x0E040C6))
 #define FMV_R88 (*((unsigned short *)0x0E04088))
 #define FMV_R8A (*((unsigned short *)0x0E0408A))
-#define FMV_RA0 (*((unsigned short *)0x0E040A0))
+#define FMV_DTS (*((unsigned short *)0x0E040A0))
+#define FMV_PICS_IN_FIFO (*((unsigned short *)0x0E040A4))
+#define FMV_PIC_RATE (*((unsigned short *)0x0E040A8))
+#define FMV_DISP_RATE (*((unsigned short *)0x0E040AA))
+#define FMV_FRAME_RATE (*((unsigned short *)0x0E040AC))
 #define FMV_IVEC (*((unsigned short *)0x0E040DC))
 #define FMV_TRLD (*((unsigned short *)0x0E040AE))
 #define FMV_STRM (*((unsigned short *)0x0E040C4))
