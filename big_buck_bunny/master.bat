@@ -1,4 +1,4 @@
-MOUNT D cdi-sdk/TOOLS/Master
+MOUNT D ../cdi-sdk/TOOLS/Master
 MOUNT E build
 PATH %PATH%;D:\
 

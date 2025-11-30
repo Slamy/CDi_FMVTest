@@ -1,34 +1,25 @@
 # FMVTest
 
-Simple MPEG Video and Audio player for the Philips CD-i.
+A collection of example applications to utilize the MPEG hardware of the Philips CD-i
 
-Features
-- Provides an example for MPEG Playback
-- Prints relevant events on the serial port
-- Can be modified to only play Video or Audio
-- Might be helpful for Emulator development
+The applications are designed to be played from disc and loaded via serial stub
 
-## Preparing MPEG file
-
-To avoid any legal issues, this example does not provide a MPEG file.
-Instead, it relies on public domain videos, in this case the short film ["Big Buck Bunny"](https://peach.blender.org/download/)
-
-Execute `./create_movie_file.sh` which downloads the movie and transcodes it using `ffmpeg`.
-
-**Note:** For some reason, FFmpeg does not provide optimal video quality when encoding MPEG1 with a bitrate required for VCD and the Philips CD-i. The I frames tend to have certain artifacts.
-Since this became a rabbit hole, [another project](https://github.com/Slamy/MPEG1_Handbook) was created to discuss this issue and provide solutions with different MPEG encoders.
-
-Since not video quality, but building a MPEG capable application for the CD-i is the emphasis here, we are accepting the lack of quality for the moment.
+[Playing Big Buck Bunny](big_buck_bunny/)
+[Offset between FMV and Base case](fmv_offset)
 
 ## Compiling under Linux
 
 ### Prerequisites
 
-Clone https://github.com/TwBurn/cdi-sdk by updating the git submodules and have it mounted as D: drive in winecfg.
+Clone https://github.com/TwBurn/cdi-sdk by updating the git submodules and have it mounted as D: drive in winecfg. That can be done via script.
+
+	ln -s $(realpath cdi-sdk) ~/.wine/dosdevices/d:
 
 For stub loading this application on a CD-i using the serial port, [cdilink](https://www.cdiemu.org/?body=site/cdilink.htm) is required.
 
 ### Compiling
+
+Go to one of the examples and do this
 
 	WINEPATH=D:/DOS/BIN wine D:/dos/bin/bmake.exe link
 
@@ -57,7 +48,7 @@ Keep in mind that MAME currently has no DVC emulation! It won't work!
 
 ### Start image on cdiemu
 
-	wine wcdiemu-v053b7.exe disk/FMVTEST.CDI -playcdi -start
+	wine wcdiemu-v053b9.exe disk/FMVTEST.CDI -playcdi -start
 
 ### Start application via stub loader
 
