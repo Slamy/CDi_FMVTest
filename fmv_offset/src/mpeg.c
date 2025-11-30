@@ -152,6 +152,47 @@ void initMpeg()
 	printf("InitMPEG %d %d - %X %X - %X %X\n", maPath, mvPath, &mvPcl[0], mvPcl[0].PCL_Nxt, &mvPcl[MV_PCL_COUNT - 1], mvPcl[MV_PCL_COUNT - 1].PCL_Nxt);
 }
 
+unsigned long *fdrvs1_static = 0;
+
+
+void FindFmvDriverStruct()
+{
+	int i;
+	unsigned long *ptr;
+	unsigned long dma_adr;
+	unsigned long fma_dclk_adr;
+
+	if (fdrvs1_static != 0)
+		return;
+
+	/* This is very dirty ! But it seems to work !*/
+	ptr = (unsigned long *)(0x001500);
+	ptr = (unsigned long *)ptr[0x48 / 4];
+	ptr += (mvPath - 1); /* not sure about this */
+	ptr = (unsigned long *)ptr[0];
+	ptr = (unsigned long *)ptr[1];
+	fdrvs1_static = (unsigned long *)ptr[1];
+	/* On MiSTer it is 0x00dfb180 */
+	/* On cdiemu with vmpega.rom it is also 0x00dfb180 */
+	/* On 210/05 with VMPEG it is 0x00dfa980 */
+	printf("fdrvs1_static: %x\n", fdrvs1_static);
+	dma_adr = fdrvs1_static[83];
+	fma_dclk_adr = fdrvs1_static[85];
+	printf("dma_adr %x\n", dma_adr);		   /* must be e04000 */
+	printf("fma_dclk_adr %x\n", fma_dclk_adr); /* must be e03010 */
+	/* confirm the correctness of fdrvs1_static */
+	DEBUG(dma_adr == 0xe04000);
+	DEBUG(fma_dclk_adr == 0xe03010);
+
+	for (i = 0; i < 100; i++)
+	{
+		/* if (temp_array1[i] != temp_array2[i]) */
+		{
+			/* printf("Diff at %d %x %x\n",i,temp_array1[i], temp_array2[i]); */
+		}
+	}
+}
+
 void playMpeg(path, channel) char *path;
 int channel;
 {
@@ -172,6 +213,8 @@ int channel;
 	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
 	DEBUG(mv_show(mvPath, 0));
+
+	FindFmvDriverStruct();
 
 #ifdef ENABLE_AUDIO
 	/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
@@ -238,11 +281,10 @@ void mpegPic()
 	offsetX = (768 - width) / 2;
 	offsetY = (560 - height) / 2;
 
-	printf("PIC: %d %d - %d %d  %x %x %x\n", width, height, offsetX, offsetY, FMV_IMGRT, FMV_SYS_PRPA, FMV_RC6);
+	printf("PIC: %d %d - %d %d\n", width, height, offsetX, offsetY);
 
 	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
-
 	DEBUG(mv_show(mvPath, 0));
 
 	mpegStatus = MPP_PLAY;
@@ -277,7 +319,19 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		printf("MV %x\n", sigCode);
+		int V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+		int V_CurDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x104);
+		int V_NewDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x108);
+		int V_SCRupd = *(unsigned long *)(((char *)fdrvs1_static) + 0x166);
+		int V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
+		int V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
+		int V_DataSize = *(unsigned long *)(((char *)fdrvs1_static) + 0x126);
+
+		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
+		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
+
+		printf("MV %x %d %d\n", sigCode, V_Stat, V_BufStat);
 
 		/* Event coming from MPEG Video driver */
 		mpegPic();
@@ -286,13 +340,13 @@ int sigCode;
 
 /*
 Expected output
-MV b200   0 3000230 0 0 c800c8
+MV b200   0 3000230 0 0 c800c8			MV_TRIG_NIS
 PIC: 200 200 - 284 180
-MV b180   0 c800c8 11c00b4 0 c800c8
+MV b180   0 c800c8 11c00b4 0 c800c8		MV_TRIG_BUF | MV_TRIG_EOS
 PIC: 200 200 - 284 180
-MV b100   0 c800c8 11c00b4 0 c800c8
+MV b100   0 c800c8 11c00b4 0 c800c8		MV_TRIG_BUF
 PIC: 200 200 - 284 180
-MV b010   0 c800c8 11c00b4 0 c800c8
+MV b010   0 c800c8 11c00b4 0 c800c8		MV_TRIG_LPD
 PIC: 200 200 - 284 180
 MV2 391
 
@@ -303,9 +357,9 @@ InitMPEG 4 5 - D0004A D00066 - D00862 D0004A
 Starting FMV
 playMpeg /cd/VIDEO01.RTF 0 - 1 1
 Started Play /cd/VIDEO01.RTF at d01376
-MV b080   0 30001e0 0 0 30001e0
+MV b080   0 30001e0 0 0 30001e0				MV_TRIG_EOS
 PIC 30001e0 30001e0 0 0 0
-MV b010   0 30001e0 0 0 30001e0
+MV b010   0 30001e0 0 0 30001e0				MV_TRIG_LPD
 PIC 30001e0 30001e0 0 0 0
 MV2 91
 
