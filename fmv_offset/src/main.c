@@ -45,7 +45,6 @@ void runProgram()
 {
 	int evId = _ev_link("line_event");
 
-	setIcf(ICF_MAX, ICF_MAX);
 	while (1)
 	{
 		if (mpegStatus == MPP_STOP)
@@ -58,10 +57,29 @@ void runProgram()
 	}
 }
 
+extern int os9forkc();
+extern char **environ;
+char *argblk[] = {
+	"vcd",
+	0,
+};
+
 int main(argc, argv)
 int argc;
 char *argv[];
 {
+	/* system("vcd"); */
+	int pid;
+	/*
+	 * My VMPEG DVC starts in VCD mode.
+	 * When stub loading the application, it is not configured to Green Book resolution.
+	 * Manually starting the vcd application fixes this problem.
+	 */
+	if ((pid = os9exec(os9forkc, argblk[0], argblk, environ, 0, 0, 3)) > 0)
+		wait(0);
+	else
+		printf("cant fork\n");
+
 	intercept(mainSignal);
 	initSystem();
 	runProgram();
