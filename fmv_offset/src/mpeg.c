@@ -8,6 +8,7 @@
 #include <ma.h>
 
 #include "mpeg.h"
+#include "video.h"
 #include "hwreg.h"
 #include "cross_mpg.h"
 
@@ -154,7 +155,6 @@ void initMpeg()
 
 unsigned long *fdrvs1_static = 0;
 
-
 void FindFmvDriverStruct()
 {
 	int i;
@@ -289,9 +289,10 @@ void mpegPic()
 
 	DEBUG(mv_org(mvPath, mvMapId, 30, 30));
 	DEBUG(mv_pos(mvPath, mvMapId, 100, 100, 0));
+	/* in sume 65 x 65*/
 
 	/* cut the eye of the parrot */
-	DEBUG(mv_window(mvPath, mvMapId, 72*2, 68*2, 66*2, 44*2, 0));
+	DEBUG(mv_window(mvPath, mvMapId, 72 * 2, 68 * 2, 66 * 2, 44 * 2, 0));
 	DEBUG(mv_show(mvPath, 0));
 
 	mpegStatus = MPP_PLAY;
@@ -334,14 +335,33 @@ int sigCode;
 		int V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
 		int V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
 		int V_DataSize = *(unsigned long *)(((char *)fdrvs1_static) + 0x126);
-        int V_DTSFnd = *(unsigned char *)(((char *)fdrvs1_static) + 0x1c2);
+		int V_DTSFnd = *(unsigned char *)(((char *)fdrvs1_static) + 0x1c2);
 
 		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
 		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
-		printf("MV %x %d %d %d %x %x\n", sigCode, V_Stat, V_BufStat, V_DTSFnd, FMV_DTS,FMV_VDI_CMD);
+		printf("MV %x %d %d %d %x %x\n", sigCode, V_Stat, V_BufStat, V_DTSFnd, FMV_DTS, FMV_VDI_CMD);
 
 		/* Event coming from MPEG Video driver */
 		mpegPic();
+	}
+	else if (sigCode == SIG_BLANK)
+	{
+		static int x = 0;
+
+		x++;
+		if (x >= 100)
+			x = 30;
+
+		if (mpegStatus == MPP_PLAY)
+		{
+			/* printf("Move %d\n", x); */
+			/* DEBUG(mv_window(mvPath, mvMapId, x, 68 * 2, 66 * 2, 44 * 2, 0)); */
+
+			DEBUG(mv_org(mvPath, mvMapId, x, 30));
+			DEBUG(mv_pos(mvPath, mvMapId, x, 100, 0));
+
+		}
+		dc_ssig(videoPath, SIG_BLANK, 0);
 	}
 }

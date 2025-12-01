@@ -1,6 +1,9 @@
 #ifndef __MPEG_H__
 #define __MPEG_H__
 
+#define SIG_BLANK 0x0100
+
+
 #define MV_PCL_COUNT 75
 #define MA_PCL_COUNT 5
 #define MPEG_SECTOR_SIZE 2324

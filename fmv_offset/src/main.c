@@ -43,7 +43,7 @@ void closeSystem()
 
 void runProgram()
 {
-	int evId = _ev_link("line_event");
+	dc_ssig(videoPath, SIG_BLANK, 0);
 
 	while (1)
 	{
@@ -53,7 +53,6 @@ void runProgram()
 			playMpeg("/cd/VIDEO01.RTF", 0);
 		}
 
-		_ev_wait(evId, 1, 1); /* Wait for VBLANK */
 	}
 }
 

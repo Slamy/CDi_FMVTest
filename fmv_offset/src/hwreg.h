@@ -57,8 +57,8 @@
 #define FMV_DCLK (*((unsigned short *)0x0E04098))
 
 #define FMV_SCRPOS (*((unsigned long *)0x0E04074))
-#define FMV_DECOFF (*((unsigned long *)0x0E0407C))
 #define FMV_DECWIN (*((unsigned long *)0x0E04078))
+#define FMV_DECOFF (*((unsigned long *)0x0E0407C))
 
 #define FMV_PICSZ (*((unsigned long *)0x0E04052))
 #define FMV_PICRT (*((unsigned short *)0x0E04056)

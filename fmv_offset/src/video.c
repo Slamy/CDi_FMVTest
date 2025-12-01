@@ -84,6 +84,8 @@ void setupPlaneA()
 	fctBuffer[i++] = cl_white(2);
 	fctBuffer[i++] = cl_green(3);
 
+	/* fctBuffer[i++] = cp_sig(); */
+
 	dc_wrfct(videoPath, fctA, 0, i, fctBuffer);
 }
 
