@@ -197,6 +197,7 @@ void playMpeg(path, channel) char *path;
 int channel;
 {
 	int mv_host_size;
+	int V_DTSFnd;
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
@@ -227,6 +228,9 @@ int channel;
 	initMpegPcb(channel);
 
 	mpegStatus = MPP_INIT;
+	V_DTSFnd = *(unsigned char *)(((char *)fdrvs1_static) + 0x1c2);
+
+	printf("MVVV %x %x %x\n", V_DTSFnd, FMV_DTS, FMV_VDI_CMD);
 
 	/* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
@@ -283,8 +287,11 @@ void mpegPic()
 
 	printf("PIC: %d %d - %d %d\n", width, height, offsetX, offsetY);
 
-	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
-	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
+	DEBUG(mv_org(mvPath, mvMapId, 30, 30));
+	DEBUG(mv_pos(mvPath, mvMapId, 100, 100, 0));
+
+	/* cut the eye of the parrot */
+	DEBUG(mv_window(mvPath, mvMapId, 72*2, 68*2, 66*2, 44*2, 0));
 	DEBUG(mv_show(mvPath, 0));
 
 	mpegStatus = MPP_PLAY;
@@ -327,40 +334,14 @@ int sigCode;
 		int V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
 		int V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
 		int V_DataSize = *(unsigned long *)(((char *)fdrvs1_static) + 0x126);
+        int V_DTSFnd = *(unsigned char *)(((char *)fdrvs1_static) + 0x1c2);
 
 		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
 		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
-		printf("MV %x %d %d\n", sigCode, V_Stat, V_BufStat);
+		printf("MV %x %d %d %d %x %x\n", sigCode, V_Stat, V_BufStat, V_DTSFnd, FMV_DTS,FMV_VDI_CMD);
 
 		/* Event coming from MPEG Video driver */
 		mpegPic();
 	}
 }
-
-/*
-Expected output
-MV b200   0 3000230 0 0 c800c8			MV_TRIG_NIS
-PIC: 200 200 - 284 180
-MV b180   0 c800c8 11c00b4 0 c800c8		MV_TRIG_BUF | MV_TRIG_EOS
-PIC: 200 200 - 284 180
-MV b100   0 c800c8 11c00b4 0 c800c8		MV_TRIG_BUF
-PIC: 200 200 - 284 180
-MV b010   0 c800c8 11c00b4 0 c800c8		MV_TRIG_LPD
-PIC: 200 200 - 284 180
-MV2 391
-
-On MiSTer
-
-Video: LI="625": 0
-InitMPEG 4 5 - D0004A D00066 - D00862 D0004A
-Starting FMV
-playMpeg /cd/VIDEO01.RTF 0 - 1 1
-Started Play /cd/VIDEO01.RTF at d01376
-MV b080   0 30001e0 0 0 30001e0				MV_TRIG_EOS
-PIC 30001e0 30001e0 0 0 0
-MV b010   0 30001e0 0 0 30001e0				MV_TRIG_LPD
-PIC 30001e0 30001e0 0 0 0
-MV2 91
-
-*/

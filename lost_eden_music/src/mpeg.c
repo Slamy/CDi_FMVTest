@@ -487,7 +487,8 @@ int sigCode;
 		int V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
 		int V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
 		int V_DataSize = *(unsigned long *)(((char *)fdrvs1_static) + 0x126);
-
+        int V_DTSFnd = *(unsigned char *)(((char *)fdrvs1_static) + 0x1c2);
+		
 		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
 		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 

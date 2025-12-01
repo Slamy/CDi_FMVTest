@@ -44,6 +44,24 @@ void draw2x2(unsigned char *fb, int x, int y, int color)
 	setPixel(fb, x + 1, y + 1, color);
 }
 
+void drawRectangle(unsigned char *fb, int x, int y, int w, int h, int color)
+{
+	int i, j;
+
+	/* Horizontal lines */
+	for (i = x; i < x + w; i++)
+	{
+		setPixel(fb, i, y, color);
+		setPixel(fb, i, y + h - 1, color);
+	}
+
+	/* Vertical lines */
+	for (i = y; i < y + h; i++)
+	{
+		setPixel(fb, x, i, color);
+		setPixel(fb, x + w - 1, i, color);
+	}
+}
 void createVideoBuffers()
 {
 	int x;
@@ -54,24 +72,12 @@ void createVideoBuffers()
 	fillVideoBuffer(paVideo1, 0);
 	fillVideoBuffer(paVideo2, 0);
 
-	setPixel(paVideo1, 0, 0, 2);				/* White dot in the top left corner */
-	setPixel(paVideo1, SCREEN_WIDTH - 1, 0, 2); /* White dot in the bottom left corner */
-	setPixel(paVideo1, 0, 0, 2);				/* White dot in the top right corner */
-	setPixel(paVideo1, 0, 0, 2);				/* White dot in the bottom right corner */
+	/* a border with 1 pixel distance around the parrots eye */
+	drawRectangle(paVideo1, (30 + 100) / 2 - 2, (30 + 100) / 2 - 2, 66 + 4, 44 + 4, 2);
 
-	setPixel(paVideo2, 0, SCREEN_HEIGHT / 2, 2);				/* White dot left center */
-	setPixel(paVideo2, SCREEN_WIDTH / 2, 0, 2);					/* White dot top center */
-	setPixel(paVideo2, SCREEN_WIDTH / 2, SCREEN_HEIGHT - 1, 2); /* White dot bottom center */
-	setPixel(paVideo2, SCREEN_WIDTH - 1, SCREEN_HEIGHT / 2, 2); /* White dot right enter */
+	/* small rectangle in the center */
+	drawRectangle(paVideo1, SCREEN_WIDTH/2-1, SCREEN_HEIGHT/2-1, 3, 3, 2);
 
-	setPixel(paVideo1, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 3); /* Green dot in the center */
-
-	/* fill the centers of MPEG crosses with white to check for alignment */
-	draw2x2(paVideo1, 15, 15, 2);	/* Top left cross*/
-	draw2x2(paVideo1, 367, 15, 2);	/* Top right cross */
-	draw2x2(paVideo2, 15, 239, 2);	/* Bottom left cross */
-	draw2x2(paVideo2, 367, 239, 2); /* Bottom right cross */
-	draw2x2(paVideo2, 193, 120, 2); /* Center cross */
 
 	dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paVideo1 + pixelStart));
 	dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)paVideo2 + pixelStart));
