@@ -234,6 +234,9 @@ int channel;
 
 	/* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
+
+	/* Without mv_loop, the decoder will stop and we can't scroll through the picture */
+	DEBUG(mv_loop(mvPath, mvMapId, 0, cross_mpg_len, 10000));
 	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_mpg_len, cross_mpg, 0, &mvStatus, MV_NO_SYNC, 0));
 	/* DEBUG(mv_hostnext(mvPath, mvMapId)); */ /* Not sure if this is needed */
 #endif
@@ -287,7 +290,7 @@ void mpegPic()
 
 	printf("PIC: %d %d - %d %d\n", width, height, offsetX, offsetY);
 
-	DEBUG(mv_org(mvPath, mvMapId, 30, 30));
+	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
 	DEBUG(mv_pos(mvPath, mvMapId, 100, 100, 0));
 	/* in sume 65 x 65*/
 
@@ -348,19 +351,36 @@ int sigCode;
 	else if (sigCode == SIG_BLANK)
 	{
 		static int x = 0;
+		static int y = 0;
+		static int dir_x = 1;
+		static int dir_y = 1;
 
-		x++;
-		if (x >= 100)
-			x = 30;
+		x += dir_x;
+		y += dir_y;
+		if (x > 600)
+		{
+			dir_x = -1;
+		}
+		if (x < 30)
+		{
+			dir_x = 1;
+		}
+
+		if (y > 400)
+		{
+			dir_y = -1;
+		}
+		if (y < 30)
+		{
+			dir_y = 1;
+		}
 
 		if (mpegStatus == MPP_PLAY)
 		{
 			/* printf("Move %d\n", x); */
-			/* DEBUG(mv_window(mvPath, mvMapId, x, 68 * 2, 66 * 2, 44 * 2, 0)); */
-
-			DEBUG(mv_org(mvPath, mvMapId, x, 30));
-			DEBUG(mv_pos(mvPath, mvMapId, x, 100, 0));
-
+			DEBUG(mv_org(mvPath, mvMapId, 0, 0));
+			DEBUG(mv_pos(mvPath, mvMapId, x, y, 0));
+			DEBUG(mv_window(mvPath, mvMapId, x, y, 66 * 2, 44 * 2, 0));
 		}
 		dc_ssig(videoPath, SIG_BLANK, 0);
 	}

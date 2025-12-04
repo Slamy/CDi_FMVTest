@@ -62,6 +62,7 @@ void drawRectangle(unsigned char *fb, int x, int y, int w, int h, int color)
 		setPixel(fb, x + w - 1, i, color);
 	}
 }
+
 void createVideoBuffers()
 {
 	int x;
@@ -72,12 +73,13 @@ void createVideoBuffers()
 	fillVideoBuffer(paVideo1, 0);
 	fillVideoBuffer(paVideo2, 0);
 
+#if 0
 	/* a border with 1 pixel distance around the parrots eye */
 	drawRectangle(paVideo1, (30 + 100) / 2 - 2, (30 + 100) / 2 - 2, 66 + 4, 44 + 4, 2);
 
 	/* small rectangle in the center */
-	drawRectangle(paVideo1, SCREEN_WIDTH/2-1, SCREEN_HEIGHT/2-1, 3, 3, 2);
-
+	drawRectangle(paVideo1, SCREEN_WIDTH / 2 - 1, SCREEN_HEIGHT / 2 - 1, 3, 3, 2);
+#endif
 
 	dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paVideo1 + pixelStart));
 	dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)paVideo2 + pixelStart));

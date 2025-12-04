@@ -15,7 +15,7 @@ int sigCode;
 {
 	if (sigCode == SIGINT)
 	{
-		sleep(1);
+		sleep(2);
 		abort();
 	}
 	else
