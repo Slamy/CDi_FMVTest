@@ -11,6 +11,7 @@
 #include "video.h"
 #include "hwreg.h"
 #include "cross_mpg.h"
+#include "graphics.h"
 
 /* Have at least one of them enabled! */
 #define ENABLE_VIDEO
@@ -288,14 +289,6 @@ void mpegPic()
 	offsetX = (768 - width) / 2;
 	offsetY = (560 - height) / 2;
 
-	printf("PIC: %d %d - %d %d\n", width, height, offsetX, offsetY);
-
-	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-	DEBUG(mv_pos(mvPath, mvMapId, 100, 100, 0));
-	/* in sume 65 x 65*/
-
-	/* cut the eye of the parrot */
-	DEBUG(mv_window(mvPath, mvMapId, 72 * 2, 68 * 2, 66 * 2, 44 * 2, 0));
 	DEBUG(mv_show(mvPath, 0));
 
 	mpegStatus = MPP_PLAY;
@@ -343,7 +336,7 @@ int sigCode;
 		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
 		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
-		printf("MV %x %d %d %d %x %x\n", sigCode, V_Stat, V_BufStat, V_DTSFnd, FMV_DTS, FMV_VDI_CMD);
+		printf("MV %x\n", sigCode);
 
 		/* Event coming from MPEG Video driver */
 		mpegPic();
@@ -355,33 +348,40 @@ int sigCode;
 		static int dir_x = 1;
 		static int dir_y = 1;
 
-		x += dir_x;
-		y += dir_y;
-		if (x > 600)
-		{
-			dir_x = -1;
-		}
-		if (x < 30)
-		{
-			dir_x = 1;
-		}
-
-		if (y > 400)
-		{
-			dir_y = -1;
-		}
-		if (y < 30)
-		{
-			dir_y = 1;
-		}
+		dc_ssig(videoPath, SIG_BLANK, 0);
 
 		if (mpegStatus == MPP_PLAY)
 		{
+			drawRectangle(paVideo1, x - 1, y - 1, 66 + 4, 44 + 4, 0);
+
+			x += dir_x;
+			y += dir_y;
+
 			/* printf("Move %d\n", x); */
-			DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-			DEBUG(mv_pos(mvPath, mvMapId, x, y, 0));
-			DEBUG(mv_window(mvPath, mvMapId, x, y, 66 * 2, 44 * 2, 0));
+			/* DEBUG(mv_org(mvPath, mvMapId, 0, 0)); */
+			
+			DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 0));
+			DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 0));
+
+			drawRectangle(paVideo1, x - 1, y - 1, 66 + 4, 44 + 4, 2);
+
+			if (x > 300)
+			{
+				dir_x = -1;
+			}
+			if (x < 15)
+			{
+				dir_x = 1;
+			}
+
+			if (y > 200)
+			{
+				dir_y = -1;
+			}
+			if (y < 15)
+			{
+				dir_y = 1;
+			}
 		}
-		dc_ssig(videoPath, SIG_BLANK, 0);
 	}
 }

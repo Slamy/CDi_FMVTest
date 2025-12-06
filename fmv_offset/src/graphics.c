@@ -48,6 +48,7 @@ void drawRectangle(unsigned char *fb, int x, int y, int w, int h, int color)
 {
 	int i, j;
 
+#if 0
 	/* Horizontal lines */
 	for (i = x; i < x + w; i++)
 	{
@@ -61,6 +62,12 @@ void drawRectangle(unsigned char *fb, int x, int y, int w, int h, int color)
 		setPixel(fb, x, i, color);
 		setPixel(fb, x + w - 1, i, color);
 	}
+#else
+	setPixel(fb, x, y, color);
+	setPixel(fb, x + w, y, color);
+	setPixel(fb, x, y + h, color);
+	setPixel(fb, x + w, y + h, color);
+#endif
 }
 
 void createVideoBuffers()

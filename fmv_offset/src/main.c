@@ -1,6 +1,5 @@
 #include <csd.h>
 #include <sysio.h>
-#include <signal.h>
 #include <ucm.h>
 #include <events.h>
 #include <stdio.h>
@@ -9,14 +8,17 @@
 #include "video.h"
 #include "graphics.h"
 #include "mpeg.h"
+#include <signal.h>
+
+int exit_app=0;
 
 int mainSignal(sigCode)
 int sigCode;
 {
 	if (sigCode == SIGINT)
 	{
-		sleep(2);
-		abort();
+		printf("SIGINT!\n");
+		exit_app=1;
 	}
 	else
 	{
@@ -45,14 +47,13 @@ void runProgram()
 {
 	dc_ssig(videoPath, SIG_BLANK, 0);
 
-	while (1)
+	while (!exit_app)
 	{
 		if (mpegStatus == MPP_STOP)
 		{
 			printf("Starting FMV\n");
 			playMpeg("/cd/VIDEO01.RTF", 0);
 		}
-
 	}
 }
 
@@ -80,8 +81,11 @@ char *argv[];
 		printf("cant fork\n");
 
 	intercept(mainSignal);
+
 	initSystem();
 	runProgram();
 	closeSystem();
+
+	sleep(1);
 	exit(0);
 }
