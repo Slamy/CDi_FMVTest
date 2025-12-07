@@ -391,7 +391,14 @@ int sigCode;
 			while (FMA_DCLK < start + 200)
 				;
 #endif
+
+#if 1
+			FMV_SCRPOS = (fmv_x) | (fmv_y << 16);
+			FMV_VIDCMD = 0xc;
+
+#else
 			DEBUG(mv_pos(mvPath, mvMapId, fmv_x * 2, fmv_y * 2, 1));
+#endif
 		}
 	}
 }
