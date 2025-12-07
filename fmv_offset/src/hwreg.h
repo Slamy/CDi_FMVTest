@@ -141,4 +141,11 @@
 
 #define UART_CSR (*((unsigned char *)0x80002015))
 
+
+/* --- MCD212 --- */
+
+#define MCD212_CSR1R (*((unsigned char *)0x4ffff1))
+#define CSR1R_DA_MASK 0x80
+
+
 #endif

@@ -99,7 +99,7 @@ void createVideoBuffers()
 	dc_wrli(videoPath, lctA, 2, 7, cp_icf(PA, ICF_MAX));
 	dc_wrli(videoPath, lctB, 2, 7, cp_icf(PB, ICF_MAX));
 
-	dc_wrli(videoPath, lctB, 201*2, 7, cp_sig());
+	dc_wrli(videoPath, lctB, 260*2, 7, cp_sig());
 }
 
 int readImage(file, videoBuffer)
