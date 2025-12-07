@@ -62,4 +62,6 @@ extern int mpegStatus;
 extern int mvPath, maPath;
 extern int mvMapId, maMapId;
 
+extern int raster_equal_to_fmv;
+
 #endif

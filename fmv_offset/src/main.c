@@ -6,11 +6,12 @@
 #include <setsys.h>
 
 #include "video.h"
+#include "input.h"
 #include "graphics.h"
 #include "mpeg.h"
 #include <signal.h>
 
-int exit_app=0;
+int exit_app = 0;
 
 int mainSignal(sigCode)
 int sigCode;
@@ -18,7 +19,7 @@ int sigCode;
 	if (sigCode == SIGINT)
 	{
 		printf("SIGINT!\n");
-		exit_app=1;
+		exit_app = 1;
 	}
 	else
 	{
@@ -33,6 +34,7 @@ void initProgram()
 void initSystem()
 {
 	initVideo();
+	initInput();
 	initGraphics();
 	initMpeg();
 	initProgram();
@@ -45,6 +47,7 @@ void closeSystem()
 
 void runProgram()
 {
+	u_short input, last_input;
 	dc_ssig(videoPath, SIG_BLANK, 0);
 
 	while (!exit_app)
@@ -54,6 +57,16 @@ void runProgram()
 			printf("Starting FMV\n");
 			playMpeg("/cd/VIDEO01.RTF", 0);
 		}
+
+		input = readInput1();
+
+		if ((last_input & I_BUTTON1) == 0 && (input & I_BUTTON1))
+		{
+			raster_equal_to_fmv = !raster_equal_to_fmv;
+			printf("Raster == FMV %d\n", raster_equal_to_fmv);
+		}
+
+		last_input = input;
 	}
 }
 

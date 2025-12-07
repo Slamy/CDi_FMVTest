@@ -4,6 +4,7 @@
 D:\OS9\CDI\lib\cstart.r
 out\main.r
 out\graphics.r
+out\input.r
 out\mpeg.r
 out\video.r
 -l=D:\OS9\CDI\lib\cdi.l

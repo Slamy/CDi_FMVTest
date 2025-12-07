@@ -26,6 +26,7 @@ extern int errno;
 
 int mpegStatus;
 int maPath, mvPath, maMapId, mvMapId;
+int raster_equal_to_fmv = 1;
 
 static int mpegFile = -1;
 
@@ -212,8 +213,8 @@ int channel;
 	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
 	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
-	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
+	DEBUG(mv_pos(mvPath, mvMapId, 130 * 2, 130 * 2, 0));
+	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 16 * 2, 16 * 2, 0));
 	DEBUG(mv_show(mvPath, 0));
 
 	FindFmvDriverStruct();
@@ -343,45 +344,54 @@ int sigCode;
 	}
 	else if (sigCode == SIG_BLANK)
 	{
-		static int x = 0;
-		static int y = 0;
-		static int dir_x = 1;
-		static int dir_y = 1;
+		static int fmv_x = 130;
+		static int fmv_y = 130;
+
+		static int raster_x = 130;
+		static int raster_y = 130;
 
 		dc_ssig(videoPath, SIG_BLANK, 0);
 
 		if (mpegStatus == MPP_PLAY)
 		{
-			drawRectangle(paVideo1, x - 1, y - 1, 66 + 4, 44 + 4, 0);
-
-			x += dir_x;
-			y += dir_y;
+			int start;
 
 			/* printf("Move %d\n", x); */
 			/* DEBUG(mv_org(mvPath, mvMapId, 0, 0)); */
-			
-			DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 0));
-			DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 0));
 
-			drawRectangle(paVideo1, x - 1, y - 1, 66 + 4, 44 + 4, 2);
+			draw2x2(paVideo1, raster_x + 7, raster_y + 7, 0);
 
-			if (x > 300)
+			if (raster_equal_to_fmv == 0)
 			{
-				dir_x = -1;
-			}
-			if (x < 15)
-			{
-				dir_x = 1;
+				raster_y = fmv_y;
+				raster_x = fmv_x;
 			}
 
-			if (y > 200)
+			if (fmv_x == 130)
 			{
-				dir_y = -1;
+				fmv_y = 130 + 14;
+				fmv_x = 130 + 14;
 			}
-			if (y < 15)
+			else
 			{
-				dir_y = 1;
+				fmv_y = 130;
+				fmv_x = 130;
 			}
+
+			if (raster_equal_to_fmv != 0)
+			{
+				raster_y = fmv_y;
+				raster_x = fmv_x;
+			}
+
+			draw2x2(paVideo1, raster_x + 7, raster_y + 7, 2);
+
+#if 0
+			start = FMA_DCLK;
+			while (FMA_DCLK < start + 200)
+				;
+#endif
+			DEBUG(mv_pos(mvPath, mvMapId, fmv_x * 2, fmv_y * 2, 1));
 		}
 	}
 }

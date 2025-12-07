@@ -77,14 +77,12 @@ void setupPlaneA()
 	fctBuffer[i++] = cl_red(1);
 	fctBuffer[i++] = cl_white(2);
 	fctBuffer[i++] = cl_green(3);
-	
+
 	fctBuffer[i++] = cp_cbnk(3);
 	fctBuffer[i++] = cl_black(0);
 	fctBuffer[i++] = cl_red(1);
 	fctBuffer[i++] = cl_white(2);
 	fctBuffer[i++] = cl_green(3);
-
-	/* fctBuffer[i++] = cp_sig(); */
 
 	dc_wrfct(videoPath, fctA, 0, i, fctBuffer);
 }
@@ -92,11 +90,12 @@ void setupPlaneA()
 void setupPlaneB()
 {
 	int i = 0;
+	int j;
 	fctB = initFCT(PB, FCT_SIZE);
 	lctB = initLCT(PB, LCT_SIZE);
 	dc_flnk(videoPath, fctB, lctB, 0);
 
-	fctBuffer[i++] = cp_sig();
+	fctBuffer[i++] = cp_nop();
 	fctBuffer[i++] = cp_nop();
 	fctBuffer[i++] = cp_nop();
 	fctBuffer[i++] = cp_nop();

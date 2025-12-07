@@ -22,7 +22,7 @@ ASFLAGS = -O=0 -S -R=$(OUTPUT) -T=$(OUTPUT) -TO=osk -TP=68kI
 LD      = l68
 
 #FILES TO COMPILE
-FILES   = $(OUTPUT)/main.r $(OUTPUT)/video.r $(OUTPUT)/graphics.r $(OUTPUT)/mpeg.r
+FILES   = $(OUTPUT)/main.r $(OUTPUT)/video.r $(OUTPUT)/graphics.r $(OUTPUT)/mpeg.r $(OUTPUT)/input.r
 
 #LINKER CONFIGURATION
 LDPARAM = -a -n=cdi_$(NAME) -o=$(BUILD)/$(NAME) $(CLIB)/cstart.r $(FILES) -l=$(CLIB)/cdi.l -l=$(CLIB)/cdisys.l -l=$(CLIB)/clib.l -l=$(CLIB)/cio.l -l=$(CLIB)/math.l -l=$(CLIB)/sys.l -l=$(CLIB)/usr.l -l=$(XCLIB)/os_csl.l
