@@ -96,7 +96,7 @@ void setupPlaneB()
 	lctB = initLCT(PB, LCT_SIZE);
 	dc_flnk(videoPath, fctB, lctB, 0);
 
-	fctBuffer[i++] = cp_sig();
+	fctBuffer[i++] = cp_nop();
 	fctBuffer[i++] = cp_nop();
 	fctBuffer[i++] = cp_nop();
 	fctBuffer[i++] = cp_nop();

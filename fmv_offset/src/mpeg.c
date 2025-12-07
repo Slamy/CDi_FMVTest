@@ -336,7 +336,7 @@ int sigCode;
 		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
 		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
-		printf("MV %x\n", sigCode);
+		/* printf("MV %x\n", sigCode); */
 
 		/* Event coming from MPEG Video driver */
 		mpegPic();
@@ -348,22 +348,66 @@ int sigCode;
 		static int dir_x = 1;
 		static int dir_y = 1;
 
-		dc_ssig(videoPath, SIG_BLANK, 0);
+		static int last1_x = 1;
+		static int last1_y = 1;
+		static int last2_x = 1;
+		static int last2_y = 1;
+		static int last3_x = 1;
+		static int last3_y = 1;
+
+		static int draw_x = 1;
+		static int draw_y = 1;
+		static int startcnt = 3;
+		static int pausecnt = 50;
 
 		if (mpegStatus == MPP_PLAY)
 		{
-			drawRectangle(paVideo1, x - 1, y - 1, 66 + 4, 44 + 4, 0);
+			if (startcnt > 0)
+			{
+				DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 0));
+				DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 0));
+
+				startcnt--;
+				dc_ssig(videoPath, SIG_BLANK, 0);
+
+				return;
+			}
+			drawRectangle(paVideo1, draw_x - 1, draw_y - 1, 66 + 1, 44 + 1, 0);
 
 			x += dir_x;
 			y += dir_y;
 
 			/* printf("Move %d\n", x); */
 			/* DEBUG(mv_org(mvPath, mvMapId, 0, 0)); */
-			
-			DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 0));
-			DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 0));
+			pausecnt--;
 
-			drawRectangle(paVideo1, x - 1, y - 1, 66 + 4, 44 + 4, 2);
+			/* if (pausecnt != 0) */
+			{
+
+#if 1
+				FMV_DECOFF = (x) | (y << 16);
+				FMV_SCRPOS = (x) | (y << 16);
+				FMV_DECWIN = (44 << 16) | 66;
+				FMV_VIDCMD = 0xc;
+#else
+				DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 1));
+				DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 1));
+#endif
+			}
+
+			draw_x = x;
+			draw_y = y;
+
+			drawRectangle(paVideo1, draw_x - 1, draw_y - 1, 66 + 1, 44 + 1, 2);
+
+			last3_x = last2_x;
+			last3_y = last2_y;
+
+			last2_x = last1_x;
+			last2_y = last1_y;
+
+			last1_x = x;
+			last1_y = y;
 
 			if (x > 300)
 			{
@@ -383,5 +427,7 @@ int sigCode;
 				dir_y = 1;
 			}
 		}
+
+		dc_ssig(videoPath, SIG_BLANK, 0);
 	}
 }
