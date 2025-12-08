@@ -359,19 +359,23 @@ int sigCode;
 			FMV_SCRPOS = (8) | (8 << 16);
 			FMV_DECWIN = (44 << 16) | 66;
 			FMV_VIDCMD = 0xc;
-			starttime = FMA_DCLK;
 
+			while (MCD212_CSR1R & CSR1R_DA_MASK)
+			{
+				cnt1++;
+			}
+			starttime = FMA_DCLK;
 			while ((FMV_ISR & 0x2000) == 0)
 			{
-				if (MCD212_CSR1R & CSR1R_DA_MASK)
-					cnt1++;
-				else
-					cnt0++;
+				cnt0++;
 			}
 			stoptime = FMA_DCLK;
 
 			if ((pausecnt & 3) == 1)
 				printf("%d %d %d\n", stoptime - starttime, cnt0, cnt1);
+
+			/* prints something like 17 44 106
+			 */
 		}
 
 		dc_ssig(videoPath, SIG_BLANK, 0);
