@@ -6,7 +6,10 @@ The applications are designed to be played from disc and loaded via serial stub
 
 * [Playing Big Buck Bunny](big_buck_bunny/)
 * [Offset between FMV and Base case](fmv_offset/)
+* [Moving cropped window](fmv_moving_window/)
 * [Playback of music from Lost Eden disk](lost_eden_music/)
+
+
 
 The intention of this project is to be helpful for emulator developers as well,
 since the source code can be augmented with debugging prints.
@@ -56,14 +59,15 @@ Keep in mind that MAME currently has no DVC emulation! It won't work!
 
 ### Start application via stub loader
 
-Not feeling like burning yet another CD today?
+Not feeling like burning yet another CD today? All examples here can be launched via stub loading over UART!
 
-Have `Preview 20250326` of https://twburn.itch.io/skyways in your CD-i before launch.
-The contained movie file has the same filename and will be used when loading via serial port.
+	./stub_load.sh
+
+Not only that, you don't need to touch the CD-i for these tests. All examples here will reboot the the machine into the stub loader when another program shall be started!
 
 ### Copy to MiSTer
 
-Keep in mind that the MiSTer CD-i core currently has no DVC emulation. It won't work!
+Keep in mind that the MiSTer CD-i core is not yet fully compatible with DVC software. It won't work!
 
 	scp disk/FMVTEST.CUE disk/FMVTEST.BIN root@mister:/media/fat/games/CD-i
 

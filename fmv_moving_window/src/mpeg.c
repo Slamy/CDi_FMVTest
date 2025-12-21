@@ -8,8 +8,10 @@
 #include <ma.h>
 
 #include "mpeg.h"
+#include "video.h"
 #include "hwreg.h"
 #include "cross_mpg.h"
+#include "graphics.h"
 
 /* Have at least one of them enabled! */
 #define ENABLE_VIDEO
@@ -152,10 +154,51 @@ void initMpeg()
 	printf("InitMPEG %d %d - %X %X - %X %X\n", maPath, mvPath, &mvPcl[0], mvPcl[0].PCL_Nxt, &mvPcl[MV_PCL_COUNT - 1], mvPcl[MV_PCL_COUNT - 1].PCL_Nxt);
 }
 
+unsigned long *fdrvs1_static = 0;
+
+void FindFmvDriverStruct()
+{
+	int i;
+	unsigned long *ptr;
+	unsigned long dma_adr;
+	unsigned long fma_dclk_adr;
+
+	if (fdrvs1_static != 0)
+		return;
+
+	/* This is very dirty ! But it seems to work !*/
+	ptr = (unsigned long *)(0x001500);
+	ptr = (unsigned long *)ptr[0x48 / 4];
+	ptr += (mvPath - 1); /* not sure about this */
+	ptr = (unsigned long *)ptr[0];
+	ptr = (unsigned long *)ptr[1];
+	fdrvs1_static = (unsigned long *)ptr[1];
+	/* On MiSTer it is 0x00dfb180 */
+	/* On cdiemu with vmpega.rom it is also 0x00dfb180 */
+	/* On 210/05 with VMPEG it is 0x00dfa980 */
+	printf("fdrvs1_static: %x\n", fdrvs1_static);
+	dma_adr = fdrvs1_static[83];
+	fma_dclk_adr = fdrvs1_static[85];
+	printf("dma_adr %x\n", dma_adr);		   /* must be e04000 */
+	printf("fma_dclk_adr %x\n", fma_dclk_adr); /* must be e03010 */
+	/* confirm the correctness of fdrvs1_static */
+	DEBUG(dma_adr == 0xe04000);
+	DEBUG(fma_dclk_adr == 0xe03010);
+
+	for (i = 0; i < 100; i++)
+	{
+		/* if (temp_array1[i] != temp_array2[i]) */
+		{
+			/* printf("Diff at %d %x %x\n",i,temp_array1[i], temp_array2[i]); */
+		}
+	}
+}
+
 void playMpeg(path, channel) char *path;
 int channel;
 {
 	int mv_host_size;
+	int V_DTSFnd;
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
@@ -173,6 +216,8 @@ int channel;
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
 	DEBUG(mv_show(mvPath, 0));
 
+	FindFmvDriverStruct();
+
 #ifdef ENABLE_AUDIO
 	/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
 	ma_cntrl(maPath, maMapId, 0x00800080, 0L);
@@ -184,9 +229,15 @@ int channel;
 	initMpegPcb(channel);
 
 	mpegStatus = MPP_INIT;
+	V_DTSFnd = *(unsigned char *)(((char *)fdrvs1_static) + 0x1c2);
+
+	printf("MVVV %x %x %x\n", V_DTSFnd, FMV_DTS, FMV_VDI_CMD);
 
 	/* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
+
+	/* Without mv_loop, the decoder will stop and we can't scroll through the picture */
+	DEBUG(mv_loop(mvPath, mvMapId, 0, cross_mpg_len, 10000));
 	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_mpg_len, cross_mpg, 0, &mvStatus, MV_NO_SYNC, 0));
 	/* DEBUG(mv_hostnext(mvPath, mvMapId)); */ /* Not sure if this is needed */
 #endif
@@ -238,11 +289,6 @@ void mpegPic()
 	offsetX = (768 - width) / 2;
 	offsetY = (560 - height) / 2;
 
-	printf("PIC: %d %d - %d %d\n", width, height, offsetX, offsetY);
-
-	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
-	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
-
 	DEBUG(mv_show(mvPath, 0));
 
 	mpegStatus = MPP_PLAY;
@@ -277,36 +323,111 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		printf("MV %x\n", sigCode);
+		int V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+		int V_CurDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x104);
+		int V_NewDelta = *(unsigned long *)(((char *)fdrvs1_static) + 0x108);
+		int V_SCRupd = *(unsigned long *)(((char *)fdrvs1_static) + 0x166);
+		int V_PICCnt = *(unsigned char *)(((char *)fdrvs1_static) + 0x1cd);
+		int V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
+		int V_DataSize = *(unsigned long *)(((char *)fdrvs1_static) + 0x126);
+		int V_DTSFnd = *(unsigned char *)(((char *)fdrvs1_static) + 0x1c2);
+
+		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
+		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
+
+		/* printf("MV %x\n", sigCode); */
 
 		/* Event coming from MPEG Video driver */
 		mpegPic();
 	}
+	else if (sigCode == SIG_BLANK)
+	{
+		static int x = 0;
+		static int y = 0;
+		static int dir_x = 1;
+		static int dir_y = 1;
+
+		static int last1_x = 1;
+		static int last1_y = 1;
+		static int last2_x = 1;
+		static int last2_y = 1;
+		static int last3_x = 1;
+		static int last3_y = 1;
+
+		static int draw_x = 1;
+		static int draw_y = 1;
+		static int startcnt = 3;
+		static int pausecnt = 50;
+
+		if (mpegStatus == MPP_PLAY)
+		{
+			if (startcnt > 0)
+			{
+				DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 0));
+				DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 0));
+
+				startcnt--;
+				dc_ssig(videoPath, SIG_BLANK, 0);
+
+				return;
+			}
+			drawRectangle(paVideo1, draw_x - 1, draw_y - 1, 66 + 1, 44 + 1, 0);
+
+			x += dir_x;
+			y += dir_y;
+
+			/* printf("Move %d\n", x); */
+			/* DEBUG(mv_org(mvPath, mvMapId, 0, 0)); */
+			pausecnt--;
+
+			/* if (pausecnt != 0) */
+			{
+				
+#if 0
+				FMV_DECOFF = (x) | (y << 16);
+				FMV_SCRPOS = (x) | (y << 16);
+				FMV_DECWIN = (44 << 16) | 66;
+				FMV_VIDCMD = 0xc;
+#else
+				DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 1));
+				DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 1));
+#endif
+			}
+
+			draw_x = last2_x;
+			draw_y = last2_y;
+
+			drawRectangle(paVideo1, draw_x - 1, draw_y - 1, 66 + 1, 44 + 1, 2);
+
+			last3_x = last2_x;
+			last3_y = last2_y;
+
+			last2_x = last1_x;
+			last2_y = last1_y;
+
+			last1_x = x;
+			last1_y = y;
+
+			if (x > 300)
+			{
+				dir_x = -1;
+			}
+			if (x < 15)
+			{
+				dir_x = 1;
+			}
+
+			if (y > 200)
+			{
+				dir_y = -1;
+			}
+			if (y < 15)
+			{
+				dir_y = 1;
+			}
+		}
+
+		dc_ssig(videoPath, SIG_BLANK, 0);
+	}
 }
-
-/*
-Expected output
-MV b200   0 3000230 0 0 c800c8
-PIC: 200 200 - 284 180
-MV b180   0 c800c8 11c00b4 0 c800c8
-PIC: 200 200 - 284 180
-MV b100   0 c800c8 11c00b4 0 c800c8
-PIC: 200 200 - 284 180
-MV b010   0 c800c8 11c00b4 0 c800c8
-PIC: 200 200 - 284 180
-MV2 391
-
-On MiSTer
-
-Video: LI="625": 0
-InitMPEG 4 5 - D0004A D00066 - D00862 D0004A
-Starting FMV
-playMpeg /cd/VIDEO01.RTF 0 - 1 1
-Started Play /cd/VIDEO01.RTF at d01376
-MV b080   0 30001e0 0 0 30001e0
-PIC 30001e0 30001e0 0 0 0
-MV b010   0 30001e0 0 0 30001e0
-PIC 30001e0 30001e0 0 0 0
-MV2 91
-
-*/

@@ -1,11 +1,11 @@
-# FMV Offset Test
+# FMV Moving Windows
 
 Loads a MPEG stream with a frame into memory and shows it using the DVC.
-Draws some pixels in the base case video to show the alignment between both video outputs
+Only shows a cropped view of the MPEG footage and moves the cropped view around like a bouncing "DVD logo"
 
 The base image is this:
 
-![White squares with crosses](cross_256.png)
+![Picture of a parrot](parrot.png)
 
 The resolution of 384x256 is the maximum possible vertical resolution when 384 horizontal pixels are required,
 due to the 396 macro block limitation of the CD-i.

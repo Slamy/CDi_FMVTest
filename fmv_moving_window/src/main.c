@@ -46,7 +46,7 @@ void closeSystem()
 
 void runProgram()
 {
-	int evId = _ev_link("line_event");
+	dc_ssig(videoPath, SIG_BLANK, 0);
 
 	while (!exit_app)
 	{
@@ -55,8 +55,6 @@ void runProgram()
 			printf("Starting FMV\n");
 			playMpeg("/cd/VIDEO01.RTF", 0);
 		}
-
-		_ev_wait(evId, 1, 1); /* Wait for VBLANK */
 	}
 }
 
