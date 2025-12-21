@@ -7,6 +7,10 @@ The base image is this:
 
 ![White squares with crosses](cross_256.png)
 
+On the CD-i it should look like this
+
+![Illustration on CDI 210/05](example.png)
+
 The resolution of 384x256 is the maximum possible vertical resolution when 384 horizontal pixels are required,
 due to the 396 macro block limitation of the CD-i.
 This image is converted to an MPEG movie and the base case video is used to fill out

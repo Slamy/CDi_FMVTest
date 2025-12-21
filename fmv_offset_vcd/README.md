@@ -8,6 +8,14 @@ The vertical raster is unchanged by this but the horizontal one is stretched.
 
 ![Pixel aspect ratio](cdi_pixels.png)
 
+The base image is this:
+
+![White squares with crosses](cross_256.png)
+
+On the CD-i it should look like this
+
+![Illustration on CDI 210/05](example.png)
+
 Note how the horizontal resolution is not capable of displaying the whole 352 pixel of a VCD.
 
 Keep in mind that this software takes advantage of a design quirk of the VMPEG DVC. Green Book compatibility is not considered here.
