@@ -296,6 +296,12 @@ void mpegPic()
 
 int sigcnt = 0;
 
+struct moving
+{
+	int x, y;
+	int dirx, diry;
+} dots[4];
+
 int mpegSignal(sigCode)
 int sigCode;
 {
@@ -348,13 +354,6 @@ int sigCode;
 		static int dir_x = 1;
 		static int dir_y = 1;
 
-		static int last1_x = 1;
-		static int last1_y = 1;
-		static int last2_x = 1;
-		static int last2_y = 1;
-		static int last3_x = 1;
-		static int last3_y = 1;
-
 		static int draw_x = 1;
 		static int draw_y = 1;
 		static int startcnt = 3;
@@ -362,69 +361,92 @@ int sigCode;
 
 		if (mpegStatus == MPP_PLAY)
 		{
+			int i;
+			int top_left_x;
+			int top_left_y;
+			int top_right_x;
+			int top_right_y;
+			int width;
+			int height;
+
 			if (startcnt > 0)
 			{
-				DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 0));
-				DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 0));
 
 				startcnt--;
+
+				dots[0].x = 30;
+				dots[0].y = 30;
+				dots[0].dirx = 3;
+				dots[0].diry = 2;
+
+				dots[1].x = 100;
+				dots[1].y = 80;
+				dots[1].dirx = 2;
+				dots[1].diry = 3;
+
+				DEBUG(mv_pos(mvPath, mvMapId, dots[0].x * 2, dots[0].y * 2, 0));
+				DEBUG(mv_window(mvPath, mvMapId, dots[0].x * 2, dots[0].y * 2, (dots[1].x - dots[0].x) * 2, (dots[1].y - dots[0].y) * 2, 0));
+
 				dc_ssig(videoPath, SIG_BLANK, 0);
 
 				return;
 			}
-			drawRectangle(paVideo1, draw_x - 1, draw_y - 1, 66 + 1, 44 + 1, 0);
 
-			x += dir_x;
-			y += dir_y;
-
-			/* printf("Move %d\n", x); */
-			/* DEBUG(mv_org(mvPath, mvMapId, 0, 0)); */
-			pausecnt--;
-
-			/* if (pausecnt != 0) */
+			if (dots[0].x < dots[1].x)
 			{
-				
-#if 0
-				FMV_DECOFF = (x) | (y << 16);
-				FMV_SCRPOS = (x) | (y << 16);
-				FMV_DECWIN = (44 << 16) | 66;
-				FMV_VIDCMD = 0xc;
-#else
-				DEBUG(mv_pos(mvPath, mvMapId, x * 2, y * 2, 1));
-				DEBUG(mv_window(mvPath, mvMapId, x * 2, y * 2, 66 * 2, 44 * 2, 1));
-#endif
+				top_left_x = dots[0].x;
+				top_right_x = dots[1].x;
+			}
+			else
+			{
+				top_right_x = dots[0].x;
+				top_left_x = dots[1].x;
 			}
 
-			draw_x = last2_x;
-			draw_y = last2_y;
-
-			drawRectangle(paVideo1, draw_x - 1, draw_y - 1, 66 + 1, 44 + 1, 2);
-
-			last3_x = last2_x;
-			last3_y = last2_y;
-
-			last2_x = last1_x;
-			last2_y = last1_y;
-
-			last1_x = x;
-			last1_y = y;
-
-			if (x > 300)
+			if (dots[0].y < dots[1].y)
 			{
-				dir_x = -1;
+				top_left_y = dots[0].y;
+				top_right_y = dots[1].y;
 			}
-			if (x < 15)
+			else
 			{
-				dir_x = 1;
+				top_right_y = dots[0].y;
+				top_left_y = dots[1].y;
 			}
+			width = top_right_x - top_left_x;
+			height = top_right_y - top_left_y;
 
-			if (y > 200)
+			if (width <= 0)
+				width = 1;
+			if (height <= 0)
+				height = 1;
+
+			DEBUG(mv_pos(mvPath, mvMapId, top_left_x * 2, top_left_y * 2, 1));
+			if (mv_window(mvPath, mvMapId, top_left_x * 2, top_left_y * 2, width * 2, height * 2, 1) == -1)
+				DEBUG(mv_window(mvPath, mvMapId, top_left_x * 2, top_left_y * 2, width * 2, height * 2, 0));
+
+			for (i = 0; i < 2; i++)
 			{
-				dir_y = -1;
-			}
-			if (y < 15)
-			{
-				dir_y = 1;
+				dots[i].x += dots[i].dirx;
+				dots[i].y += dots[i].diry;
+
+				if (dots[i].x > 360 && dots[i].dirx > 0)
+				{
+					dots[i].dirx = -dots[i].dirx;
+				}
+				if (dots[i].x < 15 && dots[i].dirx < 0)
+				{
+					dots[i].dirx = -dots[i].dirx;
+				}
+
+				if (dots[i].y > 270 && dots[i].diry > 0)
+				{
+					dots[i].diry = -dots[i].diry;
+				}
+				if (dots[i].y < 15 && dots[i].diry < 0)
+				{
+					dots[i].diry = -dots[i].diry;
+				}
 			}
 		}
 
