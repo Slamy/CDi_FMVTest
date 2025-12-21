@@ -6,6 +6,7 @@ The applications are designed to be played from disc and loaded via serial stub
 
 * [Playing Big Buck Bunny](big_buck_bunny/)
 * [Offset between FMV and Base case](fmv_offset/)
+* [Offset between FMV and Base case in VCD Mode](fmv_offset_vcd/)
 * [Moving cropped window](fmv_moving_window/)
 * [Playback of music from Lost Eden disk](lost_eden_music/)
 
