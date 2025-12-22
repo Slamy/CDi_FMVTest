@@ -71,7 +71,6 @@ int main(argc, argv)
 int argc;
 char *argv[];
 {
-	/* system("vcd"); */
 	int pid;
 	/*
 	 * My VMPEG DVC starts in VCD mode.

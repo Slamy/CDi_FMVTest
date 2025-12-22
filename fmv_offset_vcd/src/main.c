@@ -72,11 +72,17 @@ int main(argc, argv)
 int argc;
 char *argv[];
 {
-	/* system("vcd"); */
 	int pid;
 
-	/* Force VCD mode with 336 horizontal pixels? */
-	VMPEG_VCD = 1;
+	/*
+	 * My VMPEG DVC starts in VCD mode.
+	 * When stub loading the application, it is not configured to Green Book resolution.
+	 * Manually starting the vcd application fixes this problem.
+	 */
+	if ((pid = os9exec(os9forkc, argblk[0], argblk, environ, 0, 0, 3)) > 0)
+		wait(0);
+	else
+		printf("cant fork\n");
 
 	intercept(mainSignal);
 

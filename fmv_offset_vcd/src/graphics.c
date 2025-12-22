@@ -66,15 +66,47 @@ void createVideoBuffers()
 
 	setPixel(paVideo1, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 3); /* Green dot in the center */
 
-	/* Fill the centers of MPEG crosses with white to check for alignment
-	   Note the weird increments that are required to perform a match.
-	   The VCD pixels are not aligned to base case in any way
-	 */
+/* Fill the centers of MPEG crosses with white to check for alignment
+   Note the weird increments that are required to perform a match.
+   The VCD pixels are not aligned to base case in any way
+ */
+#if 0
+	/* These coordinates are only correct when manually setting VMPEG_VCD */
+	/* The horizontal offset is not aligned! */
 	draw2x2(paVideo1, 15 + 10, 15, 2);	 /* Top left cross*/
 	draw2x2(paVideo1, 367 + 14, 15, 2);	 /* Top right cross */
 	draw2x2(paVideo2, 15 + 10, 239, 2);	 /* Bottom left cross */
 	draw2x2(paVideo2, 367 + 14, 239, 2); /* Bottom right cross */
 	draw2x2(paVideo2, 193 + 10, 120, 2);	 /* Center cross */
+#else
+	/* The coordinates are correct when the 210/05 + VMPEG is set into VCD mode using the vcd service */
+	/* This is the normal case ! */
+	/* Keep in mind that stub loading will result into wrong values when no VCD is spinning(!) in the drive. */
+
+	draw2x2(paVideo1, 15, 15, 2);	/* Top left cross*/
+	draw2x2(paVideo1, 371, 15, 2);	/* Top right cross - 370.5 would have been more accurate */
+	draw2x2(paVideo2, 15, 239, 2);	/* Bottom left cross */
+	draw2x2(paVideo2, 371, 239, 2); /* Bottom right cross  - 370.5 would have been more accurate  */
+	draw2x2(paVideo2, 193, 120, 2); /* Center cross */
+
+	/* The coordinates of the MPEG file
+	Top left     15x15    Close match
+	Bottom left  15x239   Close match
+	Center       175x120  Difference of 18 pixels
+	Top right    335x15   Difference of 36 pixels
+	Bottom right 335x239  Difference of 36 pixels
+
+	The first pixel of the line is aligned to base case.
+	To calculate coordinates, use this formula
+
+	It should be noted that the horizontal resolution of VCD is 352 but the DVC
+	is not capable of that resolution. The last visible column on a Commodore 1084 is 347,
+	resulting into a horizontal resolution of 348 pixels. This means the last 4 columns are missing.
+
+	This means for every MPEG pixel, there are 1.10344827586207 base case pixels.
+	Or the other way around, for every base case pixel, there are 0.90625 MPEG pixels
+	*/
+#endif
 
 	dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paVideo1 + pixelStart));
 	dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)paVideo2 + pixelStart));

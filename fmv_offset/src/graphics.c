@@ -66,12 +66,13 @@ void createVideoBuffers()
 
 	setPixel(paVideo1, SCREEN_WIDTH / 2, SCREEN_HEIGHT / 2, 3); /* Green dot in the center */
 
-	/* fill the centers of MPEG crosses with white to check for alignment */
-	draw2x2(paVideo1, 15, 15, 2);	/* Top left cross*/
-	draw2x2(paVideo1, 367, 15, 2);	/* Top right cross */
-	draw2x2(paVideo2, 15, 239, 2);	/* Bottom left cross */
-	draw2x2(paVideo2, 367, 239, 2); /* Bottom right cross */
-	draw2x2(paVideo2, 193, 120, 2); /* Center cross */
+	/* Fill the centers of MPEG crosses with white to check for alignment */
+	/* The base case coordinates must match the DVC ones */
+	draw2x2(paVideo1, 15, 15, 2);	/* Top left cross is also at 15x15 in the MPEG file */
+	draw2x2(paVideo1, 367, 15, 2);	/* Top right cross is also at 367x15 in the MPEG file */
+	draw2x2(paVideo2, 15, 239, 2);	/* Bottom left cross is also at 15x239 in the MPEG file  */
+	draw2x2(paVideo2, 367, 239, 2); /* Bottom right cross is also at 367x239 in the MPEG file */
+	draw2x2(paVideo2, 193, 120, 2); /* Center cross is also at 193x20 in the MPEG file */
 
 	dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paVideo1 + pixelStart));
 	dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)paVideo2 + pixelStart));
