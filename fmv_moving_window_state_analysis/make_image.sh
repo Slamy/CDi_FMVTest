@@ -26,6 +26,4 @@ echo "FILE FMVTEST.BIN BINARY
 
 sed -i -e "s/FILE .*\\\\/FILE /" disk/*.CUE
 
-chdman createcd -f -i disk/FMVTEST.CUE -o disk/FMVTEST.CHD
-
 echo " --- Done! ---"
