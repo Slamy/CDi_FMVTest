@@ -8,6 +8,8 @@ The applications are designed to be played from disc and loaded via serial stub
 * [Offset between FMV and Base case](fmv_offset/)
 * [Offset between FMV and Base case in VCD Mode](fmv_offset_vcd/)
 * [Moving cropped window](fmv_moving_window/)
+* [Moving cropped window with timing analysis](fmv_moving_window_joystick_dca/)
+* [Moving cropped window with state analysis](fmv_moving_window_state_analysis/)
 * [Playback of music from Lost Eden disk](lost_eden_music/)
 
 
