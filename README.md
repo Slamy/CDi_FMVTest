@@ -11,8 +11,8 @@ The applications are designed to be played from disc and loaded via serial stub
 * [Moving cropped window with timing analysis](fmv_moving_window_joystick_dca/)
 * [Moving cropped window with state analysis](fmv_moving_window_state_analysis/)
 * [Playback of music from Lost Eden disk](lost_eden_music/)
-
-
+* [Phase relation between audio and video](audio_video_sync/)
+* [Attenuation of MPEG Audio](audio_attenuation/)
 
 The intention of this project is to be helpful for emulator developers as well,
 since the source code can be augmented with debugging prints.
