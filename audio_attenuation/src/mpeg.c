@@ -9,8 +9,9 @@
 
 #include "mpeg.h"
 #include "video.h"
+#include "audio.h"
 #include "hwreg.h"
-#include "stereo_sine.h"
+#include "stereo_sine_mpg.h"
 #include "graphics.h"
 
 /* Have at least one of them enabled! */
@@ -27,6 +28,8 @@ extern int errno;
 
 int mpegStatus;
 int maPath, mvPath, maMapId, mvMapId;
+int sigcnt = 0;
+int playback_cnt = 0;
 
 static int mpegFile = -1;
 
@@ -151,7 +154,9 @@ void StartPlayback(unsigned long attenuation)
 	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, maPath, 9900));
 #endif
 	printf("Started Play\n");
-	playback_has_ended=0;
+	playback_has_ended = 0;
+	sigcnt = 0;
+	playback_cnt++;
 }
 
 void playMpeg(unsigned long attenuation)
@@ -167,7 +172,7 @@ void playMpeg(unsigned long attenuation)
 	maMapId = ma_create(maPath, PLAYHOST);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
-	printf("playMpeg %s %d - %d %d\n", maMapId, mvMapId);
+	printf("playMpeg %d %d\n", maMapId, mvMapId);
 	/* Setup initial FMV parameters */
 	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
 	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
@@ -189,7 +194,6 @@ void playMpeg(unsigned long attenuation)
 	initMpegPcb(0);
 
 	mpegStatus = MPP_INIT;
-	StartPlayback(attenuation);
 }
 
 void stopMpeg()
@@ -237,7 +241,6 @@ void mpegPic()
 	mpegStatus = MPP_PLAY;
 }
 
-int sigcnt = 0;
 int playback_has_ended = 0;
 int mpegSignal(sigCode)
 int sigCode;
@@ -251,7 +254,6 @@ int sigCode;
 	{
 		printf("MA2 %x\n", maStatus.asy_stat);
 		playback_has_ended = 1;
-
 	}
 	else if (sigCode == MV_SIG_STAT)
 	{
@@ -266,6 +268,20 @@ int sigCode;
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
 		/* printf("MA %x\n", sigCode); */
+		sigcnt++;
+
+		if (playback_cnt == 1)
+		{
+			if (sigcnt == 10 + 1)
+			{
+				DEBUG(ma_cntrl(maPath, maMapId, 0x10801080, 0L));
+			}
+
+			if (sigcnt == 12 + 1)
+			{
+				DEBUG(ma_cntrl(maPath, maMapId, 0x00800080, 0L));
+			}
+		}
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
@@ -276,6 +292,26 @@ int sigCode;
 	}
 	else if (sigCode == SIG_BLANK)
 	{
+		static int cnt = 0;
+
 		dc_ssig(videoPath, SIG_BLANK, 0);
+
+		cnt++;
+
+		if (cnt == 10)
+		{
+			DEBUG(sc_atten(audioPath, 0x10801080));
+		}
+
+		if (cnt == 12)
+		{
+			DEBUG(sc_atten(audioPath, 0x00800080));
+		}
+
+		if (cnt == 100)
+		{
+			/* startAudio(); */
+			/* cnt = 0; */
+		}
 	}
 }

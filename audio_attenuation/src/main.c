@@ -6,6 +6,7 @@
 #include <setsys.h>
 
 #include "video.h"
+#include "audio.h"
 #include "graphics.h"
 #include "mpeg.h"
 #include <signal.h>
@@ -33,6 +34,7 @@ void initProgram()
 void initSystem()
 {
 	initVideo();
+	initAudio();
 	initGraphics();
 	initMpeg();
 	initProgram();
@@ -43,50 +45,43 @@ void closeSystem()
 	closeVideo();
 }
 
+void testVolume(unsigned long attenuation)
+{
+	if (!exit_app)
+	{
+		sleep(1);
+		StartPlayback(attenuation);
+		startAudio(attenuation);
+		while (playback_has_ended == 0)
+			;
+	}
+}
 void runProgram()
 {
 	unsigned long atten;
 	unsigned long i;
 
 	dc_ssig(videoPath, SIG_BLANK, 0);
+	playMpeg(0x00800080);
 
-	playMpeg(0x00800080); /* Normal L2L and R2R */
-	while (playback_has_ended == 0)
-		;
+	testVolume(0x00800080); /* Normal L2L and R2R */
+	testVolume(0x80008000); /* Swap left and right */
+	testVolume(0x80800080); /* Only right */
+	testVolume(0x00808080); /* Only left */
 
-	StartPlayback(0x80008000); /* Swap left and right */
-	while (playback_has_ended == 0)
-		;
-
-	StartPlayback(0x80800080); /* Only right */
-	while (playback_has_ended == 0)
-		;
-
-	StartPlayback(0x00808080); /* Only left */
-	while (playback_has_ended == 0)
-		;
-
-	StartPlayback(0x00000000); /* All On - Evil clipping Test */
-	while (playback_has_ended == 0)
-		;
-
-	StartPlayback(0x05050505); /* All On - Evil clipping Test */
-	while (playback_has_ended == 0)
-		;
+	testVolume(0x00000000); /* All On - Evil clipping Test */
+	testVolume(0x05050505); /* All On - Evil clipping Test */
 #if 0
 	StartPlayback(0x10101010); /* All On - Evil clipping Test */
 	while (playback_has_ended == 0)
 		;
 #endif
 
-	for (i = 0; i < 20; i += 1)
+	for (i = 0; i < 30; i += 1)
 	{
 		atten = (i << 24) | (i << 8) | 0x00800080;
-		StartPlayback(atten);
-		while (playback_has_ended == 0)
-			;
+		testVolume(atten);
 	}
-
 	printf("Finished!\n");
 	while (!exit_app)
 	{
