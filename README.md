@@ -13,6 +13,7 @@ The applications are designed to be played from disc and loaded via serial stub
 * [Playback of music from Lost Eden disk](lost_eden_music/)
 * [Phase relation between audio and video](audio_video_sync/)
 * [Attenuation of MPEG Audio](audio_attenuation/)
+* [Attenuation of MPEG Audio compared to the CDIC](audio_attenuation_vs_cdic/)
 
 The intention of this project is to be helpful for emulator developers as well,
 since the source code can be augmented with debugging prints.
