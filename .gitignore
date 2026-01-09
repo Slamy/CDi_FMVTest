@@ -12,3 +12,14 @@ settings.json
 *.mp2
 *.mpg
 *.mov.idxb
+*.rtf
+*.RTF
+fmvtest
+fmvtest.app
+FMVTEST.BIN
+FMVTEST.CHD
+FMVTEST.CDI
+FMVTEST.CUE
+FMVTEST.TOC
+*.r
+
