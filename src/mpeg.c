@@ -190,6 +190,7 @@ void playMpeg(unsigned char *buffer, int len)
 #endif
 
 #ifdef ENABLE_AUDIO
+	DEBUG(ma_loop(maPath, maMapId, 0x0900, 0xab00, 1999));
 	DEBUG(ma_hostplay(maPath, maMapId, len, buffer, MV_NO_OFFSET, &maStatus, MV_NO_SYNC, 0));
 #endif
 
@@ -345,8 +346,10 @@ int sigCode;
 		ma_dsc_diff = maInfo.MAS_DSC - last_ma_dsc;
 		dclk_diff = dclk - last_dclk;
 
+		/*
 		printf("MA %d %x %x %x %d %d\n", sigcnt, sigCode,
 			   maInfo.MAS_Head, status, ma_dsc_diff, dclk_diff);
+		*/
 		last_dclk = dclk;
 		last_ma_dsc = maInfo.MAS_DSC;
 		sigcnt++;

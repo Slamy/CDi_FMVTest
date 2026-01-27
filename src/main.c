@@ -52,7 +52,7 @@ void runProgram()
 		if (mpegStatus == MPP_STOP)
 		{
 			printf("Starting FMV\n");
-			playMpeg(fma_mpg, sizeof(fma_mpg));
+			playMpeg(lostride_mpg, sizeof(lostride_mpg));
 		}
 
 		_ev_wait(evId, 1, 1); /* Wait for VBLANK */
