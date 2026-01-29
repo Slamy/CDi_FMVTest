@@ -14,6 +14,8 @@ The applications are designed to be played from disc and loaded via serial stub
 * [Phase relation between audio and video](audio_video_sync/)
 * [Attenuation of MPEG Audio](audio_attenuation/)
 * [Attenuation of MPEG Audio compared to the CDIC](audio_attenuation_vs_cdic/)
+* [Replication of Lost Ride railroad ambience](lost_ride_hostplay/)
+* [Failed seamless MPEG audio loop experiment](lost_ride_seamless_experiment//)
 
 The intention of this project is to be helpful for emulator developers as well,
 since the source code can be augmented with debugging prints.
