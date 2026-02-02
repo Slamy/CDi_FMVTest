@@ -54,6 +54,8 @@ void runProgram()
 			printf("Starting FMV\n");
 			playMpeg("/cd/VIDEO01.RTF", 0);
 		}
+		poll_state();
+
 	}
 }
 

@@ -128,14 +128,6 @@ void FindFmvDriverStruct()
 	/* confirm the correctness of fdrvs1_static */
 	DEBUG(dma_adr == 0xe04000);
 	DEBUG(fma_dclk_adr == 0xe03010);
-
-	for (i = 0; i < 100; i++)
-	{
-		/* if (temp_array1[i] != temp_array2[i]) */
-		{
-			/* printf("Diff at %d %x %x\n",i,temp_array1[i], temp_array2[i]); */
-		}
-	}
 }
 
 void StartSyncedPlayback()
@@ -240,7 +232,10 @@ void mpegPic()
 }
 
 int sigcnt = 0;
-int allow_restart = 0;
+
+static unsigned long recordings[100][4];
+static int recindex = 0;
+static unsigned long last_dclk = 0;
 
 int mpegSignal(sigCode)
 int sigCode;
@@ -252,12 +247,17 @@ int sigCode;
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
+		int i;
 		printf("MA2 %x\n", maStatus.asy_stat);
+
+		for (i = 0; i < recindex; i++)
+		{
+			printf("V %x %d %d %d\n", recordings[i][0], recordings[i][1], recordings[i][2], recordings[i][3]);
+		}
 	}
 	else if (sigCode == MV_SIG_STAT)
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
-		allow_restart = 1;
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
@@ -271,25 +271,65 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		/*printf("MV %x\n", sigCode); */
+		int full_cnt = 0;
+		int err_cnt = 0;
+		int i;
 
-		/* Event coming from MPEG Video driver */
-		mpegPic();
+		{
+			MotionStatus stat;
+#if 1
+			static int i;
+
+			if (recindex < 99)
+			{
+				unsigned long dclk = FMA_DCLK;
+				unsigned long diff = dclk - last_dclk;
+
+				recordings[recindex][0] = sigCode;
+				recordings[recindex][1] = FMV_PICS_IN_FIFO;
+				recordings[recindex][2] = full_cnt;
+				recordings[recindex][3] = diff;
+				recindex++;
+
+				last_dclk = dclk;
+			}
+
+#else
+			DEBUG(mv_status(mvPath, &stat));
+			printf("V %x %d %d %d\n", sigCode, FMV_PICS_IN_FIFO, full_cnt, stat.MVS_PicRt);
+#endif
+			if (mpegStatus == MPP_INIT)
+				mpegPic();
+		}
 	}
 	else if (sigCode == SIG_BLANK)
 	{
-		static int cnt = 0;
 
-		if (mpegStatus == MPP_PLAY && allow_restart)
-			cnt++;
+	}
+}
 
-		if (cnt == 10)
+void poll_state()
+{
+	if (fdrvs1_static)
+	{
+		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+		static int e_occured = 0;
+
+		if (!e_occured && V_BufStat == 0xe)
 		{
-			allow_restart = 0;
-			cnt = 0;
+			int i;
+			int full_cnt = 0;
+			unsigned long dclk = FMA_DCLK;
+			unsigned long diff = dclk - last_dclk;
 
-			StartSyncedPlayback();
+			recordings[recindex][0] = 1;
+			recordings[recindex][1] = FMV_PICS_IN_FIFO;
+			recordings[recindex][2] = full_cnt;
+			recordings[recindex][3] = diff;
+			recindex++;
+
+			last_dclk = dclk;
+			e_occured = 1;
 		}
-		dc_ssig(videoPath, SIG_BLANK, 0);
 	}
 }
