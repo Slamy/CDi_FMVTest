@@ -1,0 +1,25 @@
+options: -s
+
+define
+	album		"MiSTer VCD"
+	publisher	"ANDRE ZEPS"
+	preparer	"ANDRE ZEPS"
+
+	volume	"MiSTerVCD"	in	"DISK/MISTERVCD.CDI"
+
+	copyright	file	Copyright	from "BUILD/COPYRGHT.TXT"
+	abstract	file	Abstract	from "BUILD/ABSTRACT.TXT"
+	biblio		file	Biblio		from "BUILD/BIBLIOGR.TXT"
+	message							from "BUILD/MESSAGE.TXT"
+
+	application file	MainApp     from "BUILD/MISTRVCD"
+	green       file    videoRtf    from "BUILD/AVSEQ01.DAT"
+
+{
+	"COPYRGHT.TXT"	owner 0.0 protection 0x111	from	Copyright
+	"ABSTRACT.TXT"	owner 0.0 protection 0x111	from	Abstract
+	"BIBLIOGR.TXT"	owner 0.0 protection 0x111	from	Biblio
+	"CDI_MISTERVCD"   owner 0.0 protection 0x555	from	MainApp
+	"VIDEO01.RTF"	owner 0.0 protection 0x111	from    videoRtf
+}
+
