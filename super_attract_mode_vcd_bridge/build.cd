@@ -5,7 +5,7 @@ define
 	publisher	"ANDRE ZEPS"
 	preparer	"ANDRE ZEPS"
 
-	volume	"MiSTerVCD"	in	"DISK/MISTERVCD.CDI"
+	volume	"MiSTerVCD"	in	"DISK/MISTRVCD.CDI"
 
 	copyright	file	Copyright	from "BUILD/COPYRGHT.TXT"
 	abstract	file	Abstract	from "BUILD/ABSTRACT.TXT"

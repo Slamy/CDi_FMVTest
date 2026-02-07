@@ -10,7 +10,7 @@ echo -ne '\x03' > /dev/ttyUSB0
 # The CD-i will now reset
 
 # And go. Hopefully in time!
-wine ../cdilink.exe -port 5 -n -a 8000 -d build/mistervcd.app -e
+wine ../cdilink.exe -port 5 -n -a 8000 -d build/mistrvcd.app -e
 
 # Have a terminal
 minicom -D /dev/ttyUSB0 -b 9600

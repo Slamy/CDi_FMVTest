@@ -4,11 +4,10 @@
 #include <memory.h>
 #include "video.h"
 #include "graphics.h"
+#include "misterlogo.h"
 
-u_int frameDone = 0, frameTick = 0;
-
-u_char *paCursor;
-u_char *pbBackground;
+u_char *paVideo1;
+u_char *paVideo2;
 
 int curIcfA = ICF_MAX;
 int curIcfB = ICF_MAX;
@@ -30,34 +29,70 @@ u_int data;
 	fillBuffer(videoBuffer, data, VBUFFER_SIZE);
 }
 
-void createVideoBuffers()
+void copyRect(sourceBuffer, targetBuffer, x, y, width, height, sourceWidth)
+	u_char *sourceBuffer,
+	*targetBuffer;
+u_short x, y, width, height, sourceWidth;
 {
-	setIcf(ICF_MIN, ICF_MIN);
-	paCursor = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO1);
-	pbBackground = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO2);
+	register u_char *dst = targetBuffer + y * SCREEN_WIDTH + x;
+	register u_char *src = sourceBuffer;
+	register u_short h, w;
+	register u_char tmp;
 
-	dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paCursor + pixelStart));
-	dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)pbBackground + pixelStart));
+	for (h = 0; h < height; h++)
+	{
+		for (w = 0; w < width; w++)
+		{
+			*dst = *src;
+			dst++;
+			src++;
+		}
+		dst += SCREEN_WIDTH - width;
+		src += sourceWidth - width;
+	}
 }
 
-void clearPalette()
+void createVideoBuffers()
 {
-	int line = FCT_PAL_START;
-	int bank, color;
+	int x;
 
-	for (bank = 0; bank < 2; bank++)
+	paVideo1 = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO1);
+	paVideo2 = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO2);
+
+	if (!paVideo1)
 	{
-		dc_wrfi(videoPath, fctA, line, cp_cbnk(bank + 0));
-		dc_wrfi(videoPath, fctB, line, cp_cbnk(bank + 2));
+		printf("Memory fail 1!\n");
+		exit(0);
+	}
+	if (!paVideo2)
+	{
+		printf("Memory fail 2!\n");
+		exit(0);
+	}
 
-		line++;
+	/* fill with green to make the background transparent */
+	fillVideoBuffer(paVideo1, 0x2d2d2d2d);
+	fillVideoBuffer(paVideo2, 0);
 
-		for (color = 0; color < 64; color++)
-		{
-			dc_wrfi(videoPath, fctA, line, cp_clut(color, 0, 0, 0));
-			dc_wrfi(videoPath, fctB, line, cp_clut(color, 0, 0, 0));
-			line++;
-		}
+	copyRect(mister_logo_pixels, paVideo1, 0, screen_height - MISTER_LOGO_HEIGHT, MISTER_LOGO_WIDTH, MISTER_LOGO_HEIGHT, MISTER_LOGO_WIDTH);
+}
+
+void clearRect(videoBuffer, x, y, width, height, color)
+	u_char *videoBuffer;
+u_short x, y, width, height;
+u_char color;
+{
+	register u_int value = (color << 24) | (color << 16) | (color << 8) | color;
+	register u_int *dst = (u_int *)(videoBuffer + y * SCREEN_WIDTH + x);
+	register u_short h, w;
+
+	width >>= 2;
+
+	for (h = 0; h < height; h++)
+	{
+		for (w = 0; w < width; w++)
+			*dst++ = value;
+		dst += (SCREEN_WIDTH >> 2) - width;
 	}
 }
 
@@ -73,5 +108,4 @@ void setIcf(icfA, icfB) register int icfA, icfB;
 void initGraphics()
 {
 	createVideoBuffers();
-	clearPalette();
 }

@@ -4,7 +4,9 @@
 #include "video.h"
 
 extern int curIcfA, curIcfB;
-extern unsigned char *paCursor, *pbBackground;
+
+extern u_char *paVideo1;
+extern u_char *paVideo2;
 
 void setIcf(icfA, icfB);
 

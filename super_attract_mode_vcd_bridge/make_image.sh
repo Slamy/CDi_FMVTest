@@ -19,10 +19,10 @@ cat build/MASTER.LOG
 grep "End   generation of album" build/MASTER.LOG
 
 # Convert the CDI/TOC files into CUE/BIN by cutting off the first 150 sectors
-dd skip=150 bs=2352 if=disk/FMVTEST.CDI of=disk/FMVTEST.BIN
-echo "FILE FMVTEST.BIN BINARY
+dd skip=150 bs=2352 if=disk/MISTRVCD.CDI of=disk/MISTRVCD.BIN
+echo "FILE MISTRVCD.BIN BINARY
   TRACK 01 MODE2/2352
-    INDEX 01 00:00:00" > disk/FMVTEST.CUE
+    INDEX 01 00:00:00" > disk/MISTRVCD.CUE
 
 sed -i -e "s/FILE .*\\\\/FILE /" disk/*.CUE
 

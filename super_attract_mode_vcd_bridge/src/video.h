@@ -16,5 +16,7 @@ extern int fctA, fctB, lctA, lctB;
 extern u_int fctBuffer[FCT_SIZE];
 extern u_int pixelStart;
 extern u_int lineSkip;
+extern int screen_height;
+extern int screen_width;
 
 #endif

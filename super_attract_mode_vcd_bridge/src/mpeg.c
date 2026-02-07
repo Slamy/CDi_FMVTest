@@ -8,6 +8,7 @@
 #include <ma.h>
 
 #include "mpeg.h"
+#include "video.h"
 #include "hwreg.h"
 
 /* Have at least one of them enabled! */
@@ -241,10 +242,11 @@ void mpegPic()
 	height = width & 0x0000FFFF;
 	width = (width >> 16) & 0x0000FFFF;
 
-	offsetX = (768 - width) / 2;
-	offsetY = (560 - height) / 2;
+	/* We assume VCD mode, offsetX must be 0 */
+	offsetX = 0;
+	offsetY = (screen_height * 2 - height) / 2;
 
-	printf("PIC: %d %d - %d %d\n", width, height, offsetX, offsetY);
+	printf("PIC: %d %d - %d %d %d\n", width, height, offsetX, offsetY, screen_height);
 
 	DEBUG(mv_pos(mvPath, mvMapId, offsetX, offsetY, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, width, height, 0));

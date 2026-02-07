@@ -30,7 +30,6 @@ int sigCode;
 void initSystem()
 {
 	initVideo();
-	initGraphics();
 	initMpeg();
 }
 
