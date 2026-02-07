@@ -212,6 +212,8 @@ void stopMpeg()
 	mpegStatus = MPP_STOP;
 }
 
+MotionStatus mvstat;
+
 void mpegPic()
 {
 	int width, height, offsetX, offsetY;
@@ -226,6 +228,7 @@ void mpegPic()
 	offsetX = (768 - width) / 2;
 	offsetY = (560 - height) / 2;
 
+	DEBUG(mv_status(mvPath, &mvstat));
 	DEBUG(mv_show(mvPath, 0));
 
 	mpegStatus = MPP_PLAY;
@@ -233,8 +236,25 @@ void mpegPic()
 
 int sigcnt = 0;
 
-static unsigned long recordings[100][4];
-static int recindex = 0;
+static unsigned long regdump[200 * 3][20];
+static int regdump_index = 0;
+
+void print_registers()
+{
+	int i, j;
+
+	for (i = 0; i < regdump_index; i++)
+	{
+		printf("%3d ", i);
+		for (j = 0; j <= 3; j++)
+		{
+			printf(" %08x", regdump[i][j]);
+		}
+
+		printf("\n");
+	}
+}
+
 static unsigned long last_dclk = 0;
 
 int mpegSignal(sigCode)
@@ -247,17 +267,12 @@ int sigCode;
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
-		int i;
 		printf("MA2 %x\n", maStatus.asy_stat);
-
-		for (i = 0; i < recindex; i++)
-		{
-			printf("V %x %d %d %d\n", recordings[i][0], recordings[i][1], recordings[i][2], recordings[i][3]);
-		}
 	}
 	else if (sigCode == MV_SIG_STAT)
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
+		print_registers();
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
@@ -271,40 +286,12 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		int full_cnt = 0;
-		int err_cnt = 0;
-		int i;
 
-		{
-			MotionStatus stat;
-#if 1
-			static int i;
-
-			if (recindex < 99)
-			{
-				unsigned long dclk = FMA_DCLK;
-				unsigned long diff = dclk - last_dclk;
-
-				recordings[recindex][0] = sigCode;
-				recordings[recindex][1] = FMV_PICS_IN_FIFO;
-				recordings[recindex][2] = full_cnt;
-				recordings[recindex][3] = diff;
-				recindex++;
-
-				last_dclk = dclk;
-			}
-
-#else
-			DEBUG(mv_status(mvPath, &stat));
-			printf("V %x %d %d %d\n", sigCode, FMV_PICS_IN_FIFO, full_cnt, stat.MVS_PicRt);
-#endif
-			if (mpegStatus == MPP_INIT)
-				mpegPic();
-		}
+		if (mpegStatus == MPP_INIT)
+			mpegPic();
 	}
 	else if (sigCode == SIG_BLANK)
 	{
-
 	}
 }
 
@@ -313,23 +300,30 @@ void poll_state()
 	if (fdrvs1_static)
 	{
 		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
-		static int e_occured = 0;
+		unsigned long dclk = FMA_DCLK;
+		unsigned short pics = FMV_PICS_IN_FIFO;
+		unsigned short dts = FMV_DTS;
 
-		if (!e_occured && V_BufStat == 0xe)
+		static unsigned short last_pics;
+		static unsigned long last_dts;
+		static unsigned long last_bufstat;
+
+		if ((dts != last_dts) || (pics != last_pics) || (last_bufstat != V_BufStat))
 		{
-			int i;
-			int full_cnt = 0;
-			unsigned long dclk = FMA_DCLK;
-			unsigned long diff = dclk - last_dclk;
+			unsigned long dclkdiff = dclk - last_dclk;
 
-			recordings[recindex][0] = 1;
-			recordings[recindex][1] = FMV_PICS_IN_FIFO;
-			recordings[recindex][2] = full_cnt;
-			recordings[recindex][3] = diff;
-			recindex++;
+			regdump[regdump_index][0] = dts;
+			regdump[regdump_index][1] = pics;
+			regdump[regdump_index][2] = V_BufStat;
+			regdump[regdump_index][3] = dclkdiff;
 
+			regdump_index++;
+
+			last_dts = dts;
+			last_pics = pics;
+			last_bufstat = V_BufStat;
 			last_dclk = dclk;
-			e_occured = 1;
 		}
 	}
 }
+
