@@ -1,6 +1,7 @@
 set -e
 
 # Compile
+WINEPATH=D:/DOS/BIN wine D:/dos/bin/bmake.exe clean
 WINEPATH=D:/DOS/BIN wine D:/dos/bin/bmake.exe link_app
 
 # Stop previous execution if already running by sending Ctrl+C

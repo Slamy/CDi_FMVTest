@@ -7,6 +7,7 @@ set -e
 rm -f disk/*.BIN build/*.CDI disk/*.CUE disk/*.TOC build/MASTER.LOG
 
 # First build the application
+WINEPATH=D:/DOS/BIN wine D:/dos/bin/bmake.exe clean
 time WINEPATH=D:/DOS/BIN wine D:/dos/bin/bmake.exe link_cd
 
 # Then start MS-DOS to master the image

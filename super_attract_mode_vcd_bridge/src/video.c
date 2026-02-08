@@ -6,6 +6,7 @@
 #include <memory.h>
 #include "video.h"
 #include "graphics.h"
+#include "config.h"
 
 int videoPath;
 int fctA, fctB, lctA, lctB;
@@ -124,14 +125,19 @@ void setupPlaneA()
 	dc_flnk(videoPath, fctA, lctA, 0);
 
 	fctBuffer[i++] = cp_icm(ICM_CLUT7, ICM_CLUT7, NM_1, EV_ON, CS_A); /* Use CLUT7 for plane A and B, 1 Matte, External Video On */
-	fctBuffer[i++] = cp_tci(MIX_OFF, TR_CKEY_T, TR_ON);				  /* Transparancy Color Key for Plane A and B */
-	fctBuffer[i++] = cp_po(PR_AB);									  /* Plane A in front of B */
-	fctBuffer[i++] = cp_bkcol(BK_BLACK, BK_LOW);					  /* Backdrop Low Intensity Black */
-	fctBuffer[i++] = cp_tcol(PA, 11, 255, 1);						  /* Set transparancy color to black: rgb(0,0,0) */
-	fctBuffer[i++] = cp_mcol(PA, 0, 0, 0);							  /* Set mask color to black: rgb(0,0,0) */
-	fctBuffer[i++] = cp_yuv(PA, 16, 128, 128);						  /* Set DYUV start value */
-	fctBuffer[i++] = cp_phld(PA, PH_OFF, 1);						  /* Set Mosaic (pixel_hold) off, size = 1 */
-	fctBuffer[i++] = cp_icf(PA, ICF_MAX);							  /* Min Image Contributing Factor */
+
+#ifdef CONFIG_MISTERLOGO
+	fctBuffer[i++] = cp_tci(MIX_OFF, TR_CKEY_T, TR_ON); /* Transparancy Color Key for Plane A and B */
+#else
+	fctBuffer[i++] = cp_tci(MIX_OFF, TR_ON, TR_ON); /* Transparancy Color Key for Plane A and B */
+#endif
+	fctBuffer[i++] = cp_po(PR_AB);				 /* Plane A in front of B */
+	fctBuffer[i++] = cp_bkcol(BK_BLACK, BK_LOW); /* Backdrop Low Intensity Black */
+	fctBuffer[i++] = cp_tcol(PA, 11, 255, 1);	 /* Set transparancy color to black: rgb(0,0,0) */
+	fctBuffer[i++] = cp_mcol(PA, 0, 0, 0);		 /* Set mask color to black: rgb(0,0,0) */
+	fctBuffer[i++] = cp_yuv(PA, 16, 128, 128);	 /* Set DYUV start value */
+	fctBuffer[i++] = cp_phld(PA, PH_OFF, 1);	 /* Set Mosaic (pixel_hold) off, size = 1 */
+	fctBuffer[i++] = cp_icf(PA, ICF_MAX);		 /* Min Image Contributing Factor */
 	fctBuffer[i++] = cp_matte(0, MO_END, MF_MF0, ICF_MAX, 0);
 	fctBuffer[i++] = cp_dprm(RMS_NORMAL, PRF_X2, BP_NORMAL); /* Reload Display Parameters */
 
@@ -213,6 +219,7 @@ void initVideo()
 
 	setupPlaneA();
 	setupPlaneB();
+
 	dc_exec(videoPath, fctA, fctB);
 }
 

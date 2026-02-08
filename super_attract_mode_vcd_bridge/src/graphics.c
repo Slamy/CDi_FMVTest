@@ -4,7 +4,11 @@
 #include <memory.h>
 #include "video.h"
 #include "graphics.h"
+#include "config.h"
+
+#ifdef CONFIG_MISTERLOGO
 #include "misterlogo.h"
+#endif
 
 u_char *paVideo1;
 u_char *paVideo2;
@@ -29,6 +33,7 @@ u_int data;
 	fillBuffer(videoBuffer, data, VBUFFER_SIZE);
 }
 
+#ifdef CONFIG_MISTERLOGO
 void copyRect(sourceBuffer, targetBuffer, x, y, width, height, sourceWidth)
 	u_char *sourceBuffer,
 	*targetBuffer;
@@ -51,6 +56,7 @@ u_short x, y, width, height, sourceWidth;
 		src += sourceWidth - width;
 	}
 }
+#endif
 
 void createVideoBuffers()
 {
@@ -71,10 +77,13 @@ void createVideoBuffers()
 	}
 
 	/* fill with green to make the background transparent */
+#ifdef CONFIG_MISTERLOGO
 	fillVideoBuffer(paVideo1, 0x2d2d2d2d);
 	fillVideoBuffer(paVideo2, 0);
 
 	copyRect(mister_logo_pixels, paVideo1, 0, screen_height - MISTER_LOGO_HEIGHT, MISTER_LOGO_WIDTH, MISTER_LOGO_HEIGHT, MISTER_LOGO_WIDTH);
+#endif
+
 }
 
 void clearRect(videoBuffer, x, y, width, height, color)
