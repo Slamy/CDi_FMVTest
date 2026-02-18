@@ -211,7 +211,7 @@ int channel;
 	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
 	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 64, 64, 25));
 	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
-	DEBUG(mv_org(mvPath, mvMapId, 100, 100, 0));
+	DEBUG(mv_org(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 64, 64, 0));
 	DEBUG(mv_show(mvPath, 0));
@@ -323,7 +323,8 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		static int framecnt = 0;
+		static int framecnt = 1;
+		MotionStatus mvstat;
 
 		int V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
 		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
@@ -338,32 +339,39 @@ int sigCode;
 		int V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
 		int V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
-		printf("MV %x\n", sigCode);
+		/* printf("MV %x\n", sigCode); */
 
 #if 1
+		if (sigCode & MV_TRIG_LPD)
+		{
+			framecnt = 1;
+			DEBUG(mv_org(mvPath, mvMapId, 200, 200, 0));
+		}
+
 		if (sigCode & MV_TRIG_PIC)
 		{
 			switch (framecnt % 4)
 			{
 			case 0:
-				DEBUG(mv_org(mvPath, mvMapId, 100, 100, 0));
+				DEBUG(mv_org(mvPath, mvMapId, 200, 200, 0));
 				break;
 			case 1:
-				DEBUG(mv_org(mvPath, mvMapId, 100 - 32, 100, 0));
+				DEBUG(mv_org(mvPath, mvMapId, 200 - 32, 200, 0));
 				break;
 			case 2:
-				DEBUG(mv_org(mvPath, mvMapId, 100 - 32, 100 - 32, 0));
+				DEBUG(mv_org(mvPath, mvMapId, 200 - 32, 200 - 32, 0));
 				break;
 			case 3:
-				DEBUG(mv_org(mvPath, mvMapId, 100, 100 - 32, 0));
+				DEBUG(mv_org(mvPath, mvMapId, 200, 200 - 32, 0));
 				break;
 			}
+
+			/* DEBUG(mv_status(mvPath, &mvstat)); */
+			/* printf("MV %d\n", mvstat.MVS_TmpRef); */
+
 			framecnt++;
 		}
 #endif
-
-		/* Event coming from MPEG Video driver */
-		mpegPic();
 	}
 	else if (sigCode == SIG_BLANK)
 	{
