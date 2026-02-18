@@ -16,6 +16,7 @@ The applications are designed to be played from disc and loaded via serial stub
 * [Attenuation of MPEG Audio compared to the CDIC](audio_attenuation_vs_cdic/)
 * [Replication of Lost Ride railroad ambience](lost_ride_hostplay/)
 * [Failed seamless MPEG audio loop experiment](lost_ride_seamless_experiment//)
+* [Inverted flying mattes](fmv_flying_mattes/)
 
 The intention of this project is to be helpful for emulator developers as well,
 since the source code can be augmented with debugging prints.
