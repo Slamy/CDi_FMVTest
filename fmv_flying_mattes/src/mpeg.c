@@ -369,13 +369,14 @@ int sigCode;
 
 			/* DEBUG(mv_status(mvPath, &mvstat)); */
 			/* printf("MV %d\n", mvstat.MVS_TmpRef); */
-
+ 
 			framecnt++;
 		}
 
 		if (sigCode & MV_TRIG_LPD)
 		{
 			/* framecnt = 1; */
+			printf("L\n");
 		}
 #endif
 	}
