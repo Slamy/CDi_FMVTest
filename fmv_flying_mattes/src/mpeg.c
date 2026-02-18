@@ -342,14 +342,15 @@ int sigCode;
 		/* printf("MV %x\n", sigCode); */
 
 #if 1
-		if (sigCode & MV_TRIG_LPD)
-		{
-			framecnt = 1;
-			DEBUG(mv_org(mvPath, mvMapId, 200, 200, 0));
-		}
-
 		if (sigCode & MV_TRIG_PIC)
 		{
+			DEBUG(mv_status(mvPath, &mvstat));
+
+			if (mvstat.MVS_TimeCd == 0 && mvstat.MVS_TmpRef == 1)
+			{
+				framecnt = 2;
+			}
+
 			switch (framecnt % 4)
 			{
 			case 0:
@@ -370,6 +371,11 @@ int sigCode;
 			/* printf("MV %d\n", mvstat.MVS_TmpRef); */
 
 			framecnt++;
+		}
+
+		if (sigCode & MV_TRIG_LPD)
+		{
+			/* framecnt = 1; */
 		}
 #endif
 	}
