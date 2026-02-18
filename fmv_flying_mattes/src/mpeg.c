@@ -323,7 +323,7 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		static int framecnt = 1;
+		static int framecnt = 0;
 		MotionStatus mvstat;
 
 		int V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
@@ -342,32 +342,39 @@ int sigCode;
 		/* printf("MV %x\n", sigCode); */
 
 #if 1
+		/*
 		if (sigCode & MV_TRIG_LPD)
 		{
-			framecnt = 1;
+			framecnt = 3;
 			DEBUG(mv_org(mvPath, mvMapId, 200, 200, 0));
 		}
-
+		*/
 		if (sigCode & MV_TRIG_PIC)
 		{
-			switch (framecnt % 4)
+			DEBUG(mv_status(mvPath, &mvstat));
+			
+			if (mvstat.MVS_TimeCd == 0 && mvstat.MVS_TmpRef == 1)
+			{
+				framecnt = 2;
+			}
+
+			switch (framecnt % 8)
 			{
 			case 0:
 				DEBUG(mv_org(mvPath, mvMapId, 200, 200, 0));
 				break;
-			case 1:
+			case 2:
 				DEBUG(mv_org(mvPath, mvMapId, 200 - 32, 200, 0));
 				break;
-			case 2:
+			case 4:
 				DEBUG(mv_org(mvPath, mvMapId, 200 - 32, 200 - 32, 0));
 				break;
-			case 3:
+			case 6:
 				DEBUG(mv_org(mvPath, mvMapId, 200, 200 - 32, 0));
 				break;
 			}
 
-			/* DEBUG(mv_status(mvPath, &mvstat)); */
-			/* printf("MV %d\n", mvstat.MVS_TmpRef); */
+			/*printf("MV %x %x %x\n", sigCode, mvstat.MVS_TmpRef, mvstat.MVS_TimeCd); */
 
 			framecnt++;
 		}
