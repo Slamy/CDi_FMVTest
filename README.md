@@ -17,6 +17,7 @@ The applications are designed to be played from disc and loaded via serial stub
 * [Replication of Lost Ride railroad ambience](lost_ride_hostplay/)
 * [Failed seamless MPEG audio loop experiment](lost_ride_seamless_experiment//)
 * [Inverted flying mattes](fmv_flying_mattes/)
+* [Drawing in sync with MPEG](fmv_event_timing/)
 
 The intention of this project is to be helpful for emulator developers as well,
 since the source code can be augmented with debugging prints.
