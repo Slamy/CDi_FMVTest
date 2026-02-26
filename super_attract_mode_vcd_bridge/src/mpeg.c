@@ -277,8 +277,13 @@ int sigCode;
 	if (sigCode == MPEG_SIG_PCB)
 	{
 		/* Occurs when playback has finished */
-		printf("File has ended\n");
+#ifdef CONFIG_LOOPED_PLAY
+		printf("File has ended. Stop and replay\n");
 		stopMpeg();
+#else
+		printf("File has ended. Cause black screen\n");
+		DEBUG(mv_hide(mvPath));
+#endif
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
