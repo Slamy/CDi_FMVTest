@@ -246,7 +246,7 @@ void print_registers()
 	for (i = 0; i < regdump_index; i++)
 	{
 		printf("%3d ", i);
-		for (j = 0; j <= 3; j++)
+		for (j = 0; j <= 5; j++)
 		{
 			printf(" %08x", regdump[i][j]);
 		}
@@ -256,6 +256,14 @@ void print_registers()
 }
 
 static unsigned long last_dclk = 0;
+
+unsigned short fma_sigcodebuf[8];
+unsigned short fma_sigcodebuf_wrpos = 0;
+unsigned short fma_sigcodebuf_rdpos = 0;
+
+unsigned short fmv_sigcodebuf[8];
+unsigned short fmv_sigcodebuf_wrpos = 0;
+unsigned short fmv_sigcodebuf_rdpos = 0;
 
 int mpegSignal(sigCode)
 int sigCode;
@@ -283,9 +291,19 @@ int sigCode;
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
 		/* printf("MA %x\n", sigCode); */
+		if (sigCode & MA_TRIG_DEC)
+		{
+			fma_sigcodebuf[fma_sigcodebuf_wrpos] = sigCode;
+			fma_sigcodebuf_wrpos = (fma_sigcodebuf_wrpos + 1) & 7;
+		}
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
+		/* if (sigCode & (MV_TRIG_BUF | MV_TRIG_LPD))*/
+		{
+			fmv_sigcodebuf[fmv_sigcodebuf_wrpos] = sigCode;
+			fmv_sigcodebuf_wrpos = (fmv_sigcodebuf_wrpos + 1) & 7;
+		}
 
 		if (mpegStatus == MPP_INIT)
 			mpegPic();
@@ -308,14 +326,20 @@ void poll_state()
 		static unsigned long last_dts;
 		static unsigned long last_bufstat;
 
-		if ((dts != last_dts) || (pics != last_pics) || (last_bufstat != V_BufStat))
+		if ((dts != last_dts) ||
+			(pics != last_pics) ||
+			(last_bufstat != V_BufStat) ||
+			(fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
+			(fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos))
 		{
 			unsigned long dclkdiff = dclk - last_dclk;
 
 			regdump[regdump_index][0] = dts;
 			regdump[regdump_index][1] = pics;
 			regdump[regdump_index][2] = V_BufStat;
-			regdump[regdump_index][3] = dclkdiff;
+			regdump[regdump_index][3] = (fma_sigcodebuf_rdpos == fma_sigcodebuf_wrpos) ? 0 : fma_sigcodebuf[fma_sigcodebuf_rdpos];
+			regdump[regdump_index][4] = (fmv_sigcodebuf_rdpos == fmv_sigcodebuf_wrpos) ? 0 : fmv_sigcodebuf[fmv_sigcodebuf_rdpos];
+			regdump[regdump_index][5] = dclkdiff;
 
 			regdump_index++;
 
@@ -323,7 +347,11 @@ void poll_state()
 			last_pics = pics;
 			last_bufstat = V_BufStat;
 			last_dclk = dclk;
+
+			if (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos)
+				fma_sigcodebuf_rdpos = (fma_sigcodebuf_rdpos + 1) & 7;
+			if (fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos)
+				fmv_sigcodebuf_rdpos = (fmv_sigcodebuf_rdpos + 1) & 7;
 		}
 	}
 }
-
