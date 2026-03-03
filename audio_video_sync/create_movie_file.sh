@@ -5,12 +5,14 @@ set -e
 rm -f cross_audio.mpg
 rm -f cross_video.mpg
 
-ffmpeg -y -i clip.mpg \
-    -packetsize 2324 -muxpreload 0.44 \
-    -s 16x128 -r 25 \
-    -codec:v mpeg1video -g 15 -b:v 1150k -maxrate:v 1150k -bufsize:v 327680 \
-	-an \
-    cross_video.mpg
+ffmpeg -y -i frames/%02d.png \
+    -r 25 -pix_fmt yuv420p -f yuv4mpegpipe - |
+     mpeg2enc -v 0 -f 1 -n p -K tmpgenc -r 32 -4 1 -q 6 -b 1150 -o "temp_video.m1v" 
+
+ffmpeg -y -i temp_video.m1v \
+    -packetsize 2324 -muxpreload 0.44 -codec:v copy -an cross_video.mpg
+
+# 2 Sectors 11 + 5
 
 ffmpeg -y -i clip.mpg \
     -packetsize 2304 -muxpreload 0.44 \
