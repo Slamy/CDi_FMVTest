@@ -142,7 +142,7 @@ void StartSyncedPlayback()
 #ifdef ENABLE_VIDEO
 	/* Without mv_loop, the decoder will stop and we can't scroll through the picture */
 	/* DEBUG(mv_loop(mvPath, mvMapId, 0, cross_video_mpg_len, 10000)); */
-	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, maPath, 9900));
+	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len/2, cross_video_mpg, 0, &mvStatus, maPath, 9900));
 #endif
 	printf("Started Play\n");
 }
@@ -276,11 +276,11 @@ int sigCode;
 	else if (sigCode == MA_SIG_STAT)
 	{
 		printf("MA2 %x\n", maStatus.asy_stat);
+		print_registers();
 	}
 	else if (sigCode == MV_SIG_STAT)
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
-		print_registers();
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
