@@ -142,7 +142,7 @@ void StartSyncedPlayback()
 #ifdef ENABLE_VIDEO
 	/* Without mv_loop, the decoder will stop and we can't scroll through the picture */
 	/* DEBUG(mv_loop(mvPath, mvMapId, 0, cross_video_mpg_len, 10000)); */
-	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len/2, cross_video_mpg, 0, &mvStatus, maPath, 9900));
+	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, maPath, 9900));
 #endif
 	printf("Started Play\n");
 }
@@ -246,7 +246,7 @@ void print_registers()
 	for (i = 0; i < regdump_index; i++)
 	{
 		printf("%3d ", i);
-		for (j = 0; j <= 5; j++)
+		for (j = 0; j <= 7; j++)
 		{
 			printf(" %08x", regdump[i][j]);
 		}
@@ -276,11 +276,11 @@ int sigCode;
 	else if (sigCode == MA_SIG_STAT)
 	{
 		printf("MA2 %x\n", maStatus.asy_stat);
-		print_registers();
 	}
 	else if (sigCode == MV_SIG_STAT)
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
+		print_registers();
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
@@ -299,7 +299,7 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		/* if (sigCode & (MV_TRIG_BUF | MV_TRIG_LPD))*/
+		if (sigCode & (MV_TRIG_BUF | MV_TRIG_LPD | MV_TRIG_NIS | MV_TRIG_PIC))
 		{
 			fmv_sigcodebuf[fmv_sigcodebuf_wrpos] = sigCode;
 			fmv_sigcodebuf_wrpos = (fmv_sigcodebuf_wrpos + 1) & 7;
@@ -321,14 +321,20 @@ void poll_state()
 		unsigned long dclk = FMA_DCLK;
 		unsigned short pics = FMV_PICS_IN_FIFO;
 		unsigned short dts = FMV_DTS;
+		unsigned long imgsz = FMV_IMGSZ;
+		unsigned long picsz = FMV_PICSZ;
 
 		static unsigned short last_pics;
 		static unsigned long last_dts;
+		static unsigned long last_picsz;
+		static unsigned long last_imgsz;
 		static unsigned long last_bufstat;
 
 		if ((dts != last_dts) ||
 			(pics != last_pics) ||
 			(last_bufstat != V_BufStat) ||
+			(last_picsz != picsz) ||
+			(last_imgsz != imgsz) ||
 			(fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
 			(fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos))
 		{
@@ -339,7 +345,9 @@ void poll_state()
 			regdump[regdump_index][2] = V_BufStat;
 			regdump[regdump_index][3] = (fma_sigcodebuf_rdpos == fma_sigcodebuf_wrpos) ? 0 : fma_sigcodebuf[fma_sigcodebuf_rdpos];
 			regdump[regdump_index][4] = (fmv_sigcodebuf_rdpos == fmv_sigcodebuf_wrpos) ? 0 : fmv_sigcodebuf[fmv_sigcodebuf_rdpos];
-			regdump[regdump_index][5] = dclkdiff;
+			regdump[regdump_index][5] = imgsz;
+			regdump[regdump_index][6] = picsz;
+			regdump[regdump_index][7] = dclkdiff;
 
 			regdump_index++;
 
@@ -347,6 +355,8 @@ void poll_state()
 			last_pics = pics;
 			last_bufstat = V_BufStat;
 			last_dclk = dclk;
+			last_picsz = picsz;
+			last_imgsz = imgsz;
 
 			if (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos)
 				fma_sigcodebuf_rdpos = (fma_sigcodebuf_rdpos + 1) & 7;
