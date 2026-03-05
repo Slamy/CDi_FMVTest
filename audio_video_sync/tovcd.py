@@ -5,7 +5,9 @@ rows = []
 with open("log_vmpeg") as f:
     for line in f:
         parts = line.split()
-        rows.append([int(x,16) for x in parts])
+        
+        if len(parts) > 8:
+            rows.append([int(x,16) for x in parts])
 
 # compute cumulative time
 time = 0

@@ -268,6 +268,8 @@ unsigned short fmv_sigcodebuf_rdpos = 0;
 int mpegSignal(sigCode)
 int sigCode;
 {
+	static int finished_playback_blank_cnt = 0;
+
 	if (sigCode == MPEG_SIG_PCB)
 	{
 		/* Occurs when playback has finished */
@@ -280,7 +282,7 @@ int sigCode;
 	else if (sigCode == MV_SIG_STAT)
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
-		print_registers();
+		finished_playback_blank_cnt = 10;
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
@@ -310,6 +312,13 @@ int sigCode;
 	}
 	else if (sigCode == SIG_BLANK)
 	{
+		if (finished_playback_blank_cnt)
+		{
+			finished_playback_blank_cnt--;
+			if (!finished_playback_blank_cnt)
+				print_registers();
+		}
+		dc_ssig(videoPath, SIG_BLANK, 0);
 	}
 }
 
@@ -330,16 +339,18 @@ void poll_state()
 		static unsigned long last_imgsz;
 		static unsigned long last_bufstat;
 
+		static int reset_after_event = 0;
+		unsigned long dclkdiff = dclk - last_dclk;
+
 		if ((dts != last_dts) ||
 			(pics != last_pics) ||
 			(last_bufstat != V_BufStat) ||
 			(last_picsz != picsz) ||
 			(last_imgsz != imgsz) ||
 			(fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
-			(fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos))
+			(fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos) ||
+			(reset_after_event && dclkdiff > 850))
 		{
-			unsigned long dclkdiff = dclk - last_dclk;
-
 			regdump[regdump_index][0] = dts;
 			regdump[regdump_index][1] = pics;
 			regdump[regdump_index][2] = V_BufStat;
@@ -358,10 +369,18 @@ void poll_state()
 			last_picsz = picsz;
 			last_imgsz = imgsz;
 
+			reset_after_event = 0;
+
 			if (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos)
+			{
 				fma_sigcodebuf_rdpos = (fma_sigcodebuf_rdpos + 1) & 7;
+				reset_after_event = 1;
+			}
 			if (fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos)
+			{
 				fmv_sigcodebuf_rdpos = (fmv_sigcodebuf_rdpos + 1) & 7;
+				reset_after_event = 1;
+			}
 		}
 	}
 }
