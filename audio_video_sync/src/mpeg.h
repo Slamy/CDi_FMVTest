@@ -3,7 +3,9 @@
 
 #define SIG_BLANK 0x0100
 
-
+#define MV_PCL_COUNT 75
+#define MA_PCL_COUNT 5
+#define MPEG_SECTOR_SIZE 2324
 #define MPEG_CHANNEL 0
 
 #define MV_SPEED_SINGLE_STEP 0x7FFFFFFF

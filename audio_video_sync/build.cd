@@ -13,11 +13,13 @@ define
 	message							from "BUILD/MESSAGE.TXT"
 
 	application file	MainApp     from "BUILD/FMVTEST"
+	green       file    spaceaceRtf from "BUILD/spaceace.rtf"
 
 {
 	"COPYRGHT.TXT"	owner 0.0 protection 0x111	from	Copyright
 	"ABSTRACT.TXT"	owner 0.0 protection 0x111	from	Abstract
 	"BIBLIOGR.TXT"	owner 0.0 protection 0x111	from	Biblio
 	"CDI_FMVTEST"   owner 0.0 protection 0x555	from	MainApp
+	"SPACEACE.RTF"	owner 0.0 protection 0x111	from    spaceaceRtf
 }
 

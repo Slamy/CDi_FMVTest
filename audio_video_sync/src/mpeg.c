@@ -15,8 +15,8 @@
 #include "graphics.h"
 
 /* Have at least one of them enabled! */
-#define ENABLE_VIDEO
 #define ENABLE_AUDIO
+#define ENABLE_VIDEO
 
 extern int errno;
 
@@ -32,11 +32,17 @@ int maPath, mvPath, maMapId, mvMapId;
 static int mpegFile = -1;
 
 static PCB mpegPcb;
+static PCL mvPcl[MV_PCL_COUNT];
+static PCL maPcl[MA_PCL_COUNT];
+static PCL *mvCil[32];
+static PCL *maCil[16];
 
 static STAT_BLK mvStatus;
 static STAT_BLK maStatus;
 
 static MVmapDesc *mvDesc;
+
+char *mpegDataBuffer;
 
 void initMpegAudio()
 {
@@ -56,8 +62,27 @@ void initMpegPcb(channel) int channel;
 {
 	int i;
 
+	for (i = 0; i < 32; i++)
+	{
+		mvCil[i] = (PCL *)NULL;
+	}
+
+	for (i = 0; i < 16; i++)
+	{
+		maCil[i] = (PCL *)NULL;
+	}
+
+	mvCil[channel] = mvPcl;
+	maCil[channel] = maPcl;
+
 	mpegPcb.PCB_Video = NULL;
 	mpegPcb.PCB_Audio = NULL;
+#ifdef ENABLE_VIDEO
+	mpegPcb.PCB_Video = mvCil;
+#endif
+#ifdef ENABLE_AUDIO
+	mpegPcb.PCB_Audio = maCil;
+#endif
 	mpegPcb.PCB_Data = NULL;
 	mpegPcb.PCB_Sig = MPEG_SIG_PCB;
 	mpegPcb.PCB_Chan = 0x00000001 << channel;
@@ -90,12 +115,47 @@ int length;	  /* buffer size in number of sectors */
 	pcl->PCL_Cnt = 0;
 }
 
+void initMpegPcls()
+{
+	char *address = mpegDataBuffer;
+	int i;
+
+	for (i = 0; i < MV_PCL_COUNT; i++)
+	{
+		initMpegPcl(
+			&(mvPcl[i]),
+			MV_SIG_PCL,
+			&(mvPcl[(i + 1) % MV_PCL_COUNT]),
+			address,
+			1);
+		address += MPEG_SECTOR_SIZE;
+	}
+
+	for (i = 0; i < MA_PCL_COUNT; i++)
+	{
+		initMpegPcl(
+			&(maPcl[i]),
+			MA_SIG_PCL,
+			&(maPcl[(i + 1) % MA_PCL_COUNT]),
+			address,
+			1);
+		address += MPEG_SECTOR_SIZE;
+	}
+}
+
 void initMpeg()
 {
 	initMpegAudio();
 	initMpegVideo();
 
+	mpegDataBuffer = (char *)srqcmem((MV_PCL_COUNT + MA_PCL_COUNT) * MPEG_SECTOR_SIZE, SYSRAM);
+	if (!mpegDataBuffer)
+		exit(0);
+
+	initMpegPcls();
 	initMpegPcb(0);
+
+	printf("InitMPEG %d %d - %X %X - %X %X\n", maPath, mvPath, &mvPcl[0], mvPcl[0].PCL_Nxt, &mvPcl[MV_PCL_COUNT - 1], mvPcl[MV_PCL_COUNT - 1].PCL_Nxt);
 }
 
 unsigned long *fdrvs1_static = 0;
@@ -130,44 +190,26 @@ void FindFmvDriverStruct()
 	DEBUG(fma_dclk_adr == 0xe03010);
 }
 
-void StartSyncedPlayback()
+void playMpeg()
 {
-
-#ifdef ENABLE_AUDIO
-	/*DEBUG(ma_loop(maPath, maMapId, 0, cross_audio_mpg_len, 10000));*/
-	DEBUG(ma_hostplay(maPath, maMapId, cross_audio_mpg_len, cross_audio_mpg, 0, &maStatus, -2, 0));
-	DEBUG(ma_cntrl(maPath, maMapId, 0x00800080, 0L));
-#endif
-
-#ifdef ENABLE_VIDEO
-	/* Without mv_loop, the decoder will stop and we can't scroll through the picture */
-	/* DEBUG(mv_loop(mvPath, mvMapId, 0, cross_video_mpg_len, 10000)); */
-	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, maPath, 9900));
-#endif
-	printf("Started Play\n");
-}
-
-void playMpeg(path, channel) char *path;
-int channel;
-{
-	int i;
-
-	int mv_host_size;
-	int V_DTSFnd;
+	int channel = 0;
+	int streamid = 0;
+	int m, s, f, lba;
+	int i = 0;
 	mpegStatus = MPP_STOP;
 
 	/* Create FMV maps */
-	mvMapId = mv_create(mvPath, PLAYHOST);
-	maMapId = ma_create(maPath, PLAYHOST);
+	mvMapId = mv_create(mvPath, PLAYCD);
+	maMapId = ma_create(maPath, PLAYCD);
 
 	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
-	printf("playMpeg %s %d - %d %d\n", path, channel, maMapId, mvMapId);
+	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
 	/* Setup initial FMV parameters */
 	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
 	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
 	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-	DEBUG(mv_pos(mvPath, mvMapId, 768 / 2, 560 / 2 - 128, 0));
+	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
 	DEBUG(mv_show(mvPath, 0));
 
@@ -175,15 +217,43 @@ int channel;
 
 #ifdef ENABLE_AUDIO
 	/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
-	ma_cntrl(maPath, maMapId, 0x00800080, 0L);
+	ma_cntrl(maPath, maMapId, 0x00800080, streamid);
 	DEBUG(ma_trigger(maPath, MA_SIG_BASE | 0x1f));
 #endif
 
 	/* Init PCL, PCB */
+	initMpegPcls();
 	initMpegPcb(channel);
 
 	mpegStatus = MPP_INIT;
-	StartSyncedPlayback();
+
+	/* Setup MPEG Playback */
+#ifdef ENABLE_VIDEO
+	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
+#endif
+
+#ifdef ENABLE_AUDIO
+	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
+#endif
+
+	/* Assume we are not running from serial stub first */
+	mpegFile = open("/cd/SPACEACE.RTF", _READ);
+	if (mpegFile < 0)
+	{
+		/* We are running via serial stub on real hardware and Top Gun Disc? */
+		printf("Serial stub?\n");
+		mpegFile = open("/cd/spaceace.rtf", _READ);
+	}
+	DEBUG(mpegFile >= 0);
+
+	/* Space Ace intro at 01:34:11 00 */
+#if 1
+	DEBUG(lseek(mpegFile, 7837200 - 2048 * 35 - 1000, 0)); /* TIME 1341100 - Start of movie */
+#else
+	DEBUG(lseek(mpegFile, 7837200 + 2048 * 75 * 35 + 2048 * 75, 0)); /* Nearly the end */
+#endif
+	DEBUG(ss_play(mpegFile, &mpegPcb));
+	printf("Started Play %d\n", mpegFile);
 }
 
 void stopMpeg()
@@ -191,17 +261,19 @@ void stopMpeg()
 	if (mpegStatus == MPP_STOP)
 		return;
 
+#ifdef ENABLE_VIDEO
 	DEBUG(mv_abort(mvPath));
+#endif
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_abort(maPath));
 #endif
 
+#ifdef ENABLE_VIDEO
 	DEBUG(mv_hide(mvPath));
-	DEBUG(mv_release(mvPath));
+#endif
 
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_cntrl(maPath, maMapId, 0x80808080, 0L));
-	DEBUG(ma_release(maPath));
 #endif
 
 	close(mpegFile);
@@ -228,8 +300,26 @@ void mpegPic()
 	offsetX = (768 - width) / 2;
 	offsetY = (560 - height) / 2;
 
-	DEBUG(mv_status(mvPath, &mvstat));
+	DEBUG(mv_pos(mvPath, mvMapId, offsetX, offsetY, 0));
+	DEBUG(mv_window(mvPath, mvMapId, 0, 0, width, height, 0));
 	DEBUG(mv_show(mvPath, 0));
+
+#ifdef ENABLE_AUDIO
+	/* Setup volume */
+	DEBUG(ma_status(maPath, &maInfo));
+
+	printf("AUDIO: %X\n", maInfo.MAS_Head);
+	if ((maInfo.MAS_Head & MA_AUD_MODE) == MA_AUD_STEREO)
+	{
+		/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
+		ma_cntrl(maPath, maMapId, 0x00800080, 0L);
+	}
+	else
+	{
+		/* LtoL=MUTE: LtoR=MUTE: RtoR=LOUD: RtoL=LOUD */
+		ma_cntrl(maPath, maMapId, 0x80800000, 0L);
+	}
+#endif
 
 	mpegStatus = MPP_PLAY;
 }
@@ -274,6 +364,8 @@ int sigCode;
 	{
 		/* Occurs when playback has finished */
 		printf("PCB %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat);
+		print_registers();
+
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
@@ -282,7 +374,6 @@ int sigCode;
 	else if (sigCode == MV_SIG_STAT)
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
-		finished_playback_blank_cnt = 10;
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
@@ -307,8 +398,19 @@ int sigCode;
 			fmv_sigcodebuf_wrpos = (fmv_sigcodebuf_wrpos + 1) & 7;
 		}
 
-		if (mpegStatus == MPP_INIT)
-			mpegPic();
+		if (sigCode & MV_TRIG_PIC)
+		{
+			static int piccnt = 0;
+
+			if (mpegStatus == MPP_INIT)
+				mpegPic();
+
+			piccnt++;
+			if (piccnt == 30)
+			{
+				print_registers();
+			}
+		}
 	}
 	else if (sigCode == SIG_BLANK)
 	{
