@@ -301,7 +301,7 @@ int sigCode;
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		if (sigCode & (MV_TRIG_BUF | MV_TRIG_LPD | MV_TRIG_NIS | MV_TRIG_PIC))
+		/* if (sigCode & (MV_TRIG_BUF | MV_TRIG_LPD | MV_TRIG_NIS | MV_TRIG_PIC)) */
 		{
 			fmv_sigcodebuf[fmv_sigcodebuf_wrpos] = sigCode;
 			fmv_sigcodebuf_wrpos = (fmv_sigcodebuf_wrpos + 1) & 7;
