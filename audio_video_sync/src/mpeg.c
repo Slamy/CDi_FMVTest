@@ -64,16 +64,13 @@ void initMpegPcb(channel) int channel;
 
 	for (i = 0; i < 32; i++)
 	{
-		mvCil[i] = (PCL *)NULL;
+		mvCil[i] = (PCL *)mvPcl;
 	}
 
 	for (i = 0; i < 16; i++)
 	{
-		maCil[i] = (PCL *)NULL;
+		maCil[i] = (PCL *)maPcl;
 	}
-
-	mvCil[channel] = mvPcl;
-	maCil[channel] = maPcl;
 
 	mpegPcb.PCB_Video = NULL;
 	mpegPcb.PCB_Audio = NULL;
@@ -85,7 +82,7 @@ void initMpegPcb(channel) int channel;
 #endif
 	mpegPcb.PCB_Data = NULL;
 	mpegPcb.PCB_Sig = MPEG_SIG_PCB;
-	mpegPcb.PCB_Chan = 0x00000001 << channel;
+	mpegPcb.PCB_Chan = 0xffffffff;
 	mpegPcb.PCB_AChan = 0;
 	mpegPcb.PCB_Rec = 1; /* assume that there is only 1 EOR */
 	mpegPcb.PCB_Stat = 0;
@@ -242,16 +239,11 @@ void playMpeg()
 	{
 		/* We are running via serial stub on real hardware and Top Gun Disc? */
 		printf("Serial stub?\n");
-		mpegFile = open("/cd/spaceace.rtf", _READ);
+		mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ);
 	}
 	DEBUG(mpegFile >= 0);
 
-	/* Space Ace intro at 01:34:11 00 */
-#if 1
-	DEBUG(lseek(mpegFile, 7837200 - 2048 * 35 - 1000, 0)); /* TIME 1341100 - Start of movie */
-#else
-	DEBUG(lseek(mpegFile, 7837200 + 2048 * 75 * 35 + 2048 * 75, 0)); /* Nearly the end */
-#endif
+	DEBUG(lseek(mpegFile, 0, 0));
 	DEBUG(ss_play(mpegFile, &mpegPcb));
 	printf("Started Play %d\n", mpegFile);
 }
@@ -328,10 +320,12 @@ int sigcnt = 0;
 
 static unsigned long regdump[200 * 3][20];
 static int regdump_index = 0;
+static int recording_stopped = 0;
 
 void print_registers()
 {
 	int i, j;
+	recording_stopped = 1;
 
 	for (i = 0; i < regdump_index; i++)
 	{
@@ -365,7 +359,6 @@ int sigCode;
 		/* Occurs when playback has finished */
 		printf("PCB %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat);
 		print_registers();
-
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
@@ -406,7 +399,7 @@ int sigCode;
 				mpegPic();
 
 			piccnt++;
-			if (piccnt == 30)
+			if (piccnt == 80)
 			{
 				print_registers();
 			}
@@ -426,6 +419,9 @@ int sigCode;
 
 void poll_state()
 {
+	if (regdump_index > 500 || recording_stopped)
+		return;
+
 	if (fdrvs1_static)
 	{
 		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
