@@ -1,19 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.126 (w)1999-2026 BSI
-[*] Fri Mar  6 16:55:55 2026
+[*] Sat Mar  7 10:33:23 2026
 [*]
 [dumpfile] "/home/andre/GIT/Nobelia/audio_video_sync/out.vcd"
-[dumpfile_mtime] "Fri Mar  6 16:48:38 2026"
-[dumpfile_size] 3004
+[dumpfile_mtime] "Sat Mar  7 10:26:44 2026"
+[dumpfile_size] 3112
 [savefile] "/home/andre/GIT/Nobelia/audio_video_sync/wave.gtkw"
 [timestart] 0
-[size] 2721 819
-[pos] 249 -3
-*-16.955011 274400 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[size] 1920 1152
+[pos] -1 -1
+*-17.458210 332200 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 209
 [signals_width] 198
 [sst_expanded] 1
-[sst_vpaned_height] 235
+[sst_vpaned_height] 351
 @200
 -mister
 @22
@@ -24,7 +24,7 @@ log_mister.FMV_PICS_IN_FIFO[7:0]
 log_mister.FMV_Sig[15:0]
 log_mister.V_BufStat[7:0]
 log_mister.dts[31:0]
-@201
+@200
 -vmpeg
 @22
 log_vmpeg.FMA_Sig[15:0]

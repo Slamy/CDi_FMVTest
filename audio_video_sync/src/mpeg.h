@@ -25,11 +25,11 @@
 
 #define MA_SIG_BASE 0xC000 /* Signal base */
 
-#define MA_TRIG_EOI 0x0001
-#define MA_TRIG_CSU 0x0002
-#define MA_TRIG_UPD 0x0004
-#define MA_TRIG_UNF 0x0008
-#define MA_TRIG_DEC 0x0010
+#define MA_TRIG_EOI 0x0001 /* End of ISO strm */
+#define MA_TRIG_CSU 0x0002 /* Decoder changed to new audio stream */
+#define MA_TRIG_UPD 0x0004 /* Decoder updated the frameheader */
+#define MA_TRIG_UNF 0x0008 /* Buffer underflow */
+#define MA_TRIG_DEC 0x0010 /* Decoder started decoding */
 
 /* literals for the different signal mechanism */
 #define MV_SIG_BASE 0xB000 /* Signal base */
