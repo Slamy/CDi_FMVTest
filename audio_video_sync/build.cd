@@ -13,7 +13,7 @@ define
 	message							from "BUILD/MESSAGE.TXT"
 
 	application file	MainApp     from "BUILD/FMVTEST"
-	green       file    spaceaceRtf from "BUILD/spaceace.rtf"
+	green       file    spaceaceRtf from "BUILD/MUSIC01.DAT"
 
 {
 	"COPYRGHT.TXT"	owner 0.0 protection 0x111	from	Copyright

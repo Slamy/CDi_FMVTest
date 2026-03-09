@@ -16,7 +16,7 @@
 /* Have at least one of them enabled! */
 #define ENABLE_AUDIO
 #define ENABLE_VIDEO
-#define HOSTPLAY
+/* #define HOSTPLAY */
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -156,7 +156,6 @@ void initMpeg()
 
 	initMpegPcls();
 	initMpegPcb(0);
-
 }
 
 unsigned long *fdrvs1_static = 0;
@@ -216,7 +215,7 @@ void playMpeg()
 	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
 	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
 #ifdef HOSTPLAY
-    DEBUG(mv_pos(mvPath, mvMapId, 768 / 2, 560 / 2 - 128, 0));
+	DEBUG(mv_pos(mvPath, mvMapId, 768 / 2, 560 / 2 - 128, 0));
 #else
 	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
 #endif
@@ -251,6 +250,7 @@ void playMpeg()
 	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, maPath, 9900));
 #endif
 	printf("Started Play\n");
+
 #else
 	/* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
@@ -266,7 +266,8 @@ void playMpeg()
 	{
 		/* We are running via serial stub on real hardware and Top Gun Disc? */
 		printf("Serial stub?\n");
-		mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ);
+		/* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
+		mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); /* Top Gun*/
 	}
 	DEBUG(mpegFile >= 0);
 
@@ -358,7 +359,7 @@ void print_registers()
 	for (i = 0; i < regdump_index; i++)
 	{
 		printf("%3d ", i);
-		for (j = 0; j <= 7; j++)
+		for (j = 0; j <= 14; j++)
 		{
 			printf(" %08x", regdump[i][j]);
 		}
@@ -396,7 +397,7 @@ int sigCode;
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
 #ifdef HOSTPLAY
-        finished_playback_blank_cnt = 10;
+		finished_playback_blank_cnt = 10;
 #endif
 	}
 	else if (sigCode == MV_SIG_PCL)
@@ -408,7 +409,7 @@ int sigCode;
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
 		/* printf("MA %x\n", sigCode); */
-		if (sigCode & (MA_TRIG_DEC | MA_TRIG_UNF | MA_TRIG_EOI))
+		/* if (sigCode & (MA_TRIG_DEC | MA_TRIG_UNF | MA_TRIG_EOI)) */
 		{
 			fma_sigcodebuf[fma_sigcodebuf_wrpos] = sigCode;
 			fma_sigcodebuf_wrpos = (fma_sigcodebuf_wrpos + 1) & 7;
@@ -420,6 +421,13 @@ int sigCode;
 		{
 			fmv_sigcodebuf[fmv_sigcodebuf_wrpos] = sigCode;
 			fmv_sigcodebuf_wrpos = (fmv_sigcodebuf_wrpos + 1) & 7;
+		}
+
+		if (sigCode & MV_TRIG_NIS)
+		{
+			MotionStatus mvstat;
+			DEBUG(mv_status(mvPath, &mvstat));
+			printf("NIS %x\n", mvstat.MVS_ImgSz);
 		}
 
 		if (sigCode & MV_TRIG_PIC)
@@ -463,12 +471,26 @@ void poll_state()
 		unsigned short dts = FMV_DTS;
 		unsigned long imgsz = FMV_IMGSZ;
 		unsigned long picsz = FMV_PICSZ;
+		unsigned long md_imgsz = mvDesc->MD_ImgSz;
+		unsigned long md_timecd = mvDesc->MD_TimeCd;
+		unsigned short md_tmpref = mvDesc->MD_TmpRef;
+		unsigned char md_picrt = mvDesc->MD_PicRt;
+		unsigned short tmpref = FMV_TMPREF;
+		unsigned long pictimecd = FMV_PICTIMECD;
+		unsigned long imgtimecd = FMV_IMGTIMECD;
 
 		static unsigned short last_pics;
 		static unsigned long last_dts;
 		static unsigned long last_picsz;
-		static unsigned long last_imgsz;
+		static unsigned long last_reg_imgsz;
 		static unsigned long last_bufstat;
+		static unsigned long last_md_imgsz;
+		static unsigned long last_md_timecd;
+		static unsigned short last_md_tmpref;
+		static unsigned char last_md_picrt;
+		static unsigned short last_tmpref;
+		static unsigned long last_pictimecd;
+		static unsigned long last_imgtimecd;
 
 		static int reset_after_event = 0;
 		unsigned long dclkdiff = dclk - last_dclk;
@@ -477,9 +499,16 @@ void poll_state()
 			(pics != last_pics) ||
 			(last_bufstat != V_BufStat) ||
 			(last_picsz != picsz) ||
-			(last_imgsz != imgsz) ||
+			(last_reg_imgsz != imgsz) ||
 			(fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
 			(fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos) ||
+			(last_md_imgsz != md_imgsz) ||
+			(last_md_timecd != md_timecd) ||
+			(last_md_tmpref != md_tmpref) ||
+			(last_md_picrt != md_picrt) ||
+			(last_tmpref != tmpref) ||
+			(last_pictimecd != pictimecd) ||
+			(last_imgtimecd != imgtimecd) ||
 			(reset_after_event && dclkdiff > 850))
 		{
 			regdump[regdump_index][0] = dts;
@@ -489,7 +518,14 @@ void poll_state()
 			regdump[regdump_index][4] = (fmv_sigcodebuf_rdpos == fmv_sigcodebuf_wrpos) ? 0 : fmv_sigcodebuf[fmv_sigcodebuf_rdpos];
 			regdump[regdump_index][5] = imgsz;
 			regdump[regdump_index][6] = picsz;
-			regdump[regdump_index][7] = dclkdiff;
+			regdump[regdump_index][7] = md_imgsz;
+			regdump[regdump_index][8] = md_timecd;
+			regdump[regdump_index][9] = md_tmpref;
+			regdump[regdump_index][10] = md_picrt;
+			regdump[regdump_index][11] = tmpref;
+			regdump[regdump_index][12] = pictimecd;
+			regdump[regdump_index][13] = imgtimecd;
+			regdump[regdump_index][14] = dclkdiff;
 
 			regdump_index++;
 
@@ -498,7 +534,14 @@ void poll_state()
 			last_bufstat = V_BufStat;
 			last_dclk = dclk;
 			last_picsz = picsz;
-			last_imgsz = imgsz;
+			last_reg_imgsz = imgsz;
+			last_md_imgsz = md_imgsz;
+			last_md_timecd = md_timecd;
+			last_md_tmpref = md_tmpref;
+			last_md_picrt = md_picrt;
+			last_tmpref = tmpref;
+			last_pictimecd = pictimecd;
+			last_imgtimecd = imgtimecd;
 
 			reset_after_event = 0;
 
