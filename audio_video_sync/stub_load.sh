@@ -14,4 +14,7 @@ echo -ne '\x03' > /dev/ttyUSB0
 wine ../cdilink.exe -port 5 -n -a 8000 -d build/fmvtest.app -e
 
 # Have a terminal
-minicom -D /dev/ttyUSB0 -b 9600
+rm -f log_vmpeg
+minicom -D /dev/ttyUSB0 -b 9600 -C log_vmpeg
+
+# venv/bin/python tovcd.py

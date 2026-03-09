@@ -24,6 +24,7 @@
 
 #define FMV_IMGSZ (*((unsigned long *)0x0E04002))
 #define FMV_IMGRT (*((unsigned short *)0x0E04006))
+#define FMV_IMGTIMECD (*((unsigned long *)0x0E04008))
 
 #define FMV_R5E (*((unsigned short *)0x0E0405E)) /* STS */
 #define FMV_IER (*((unsigned short *)0x0E04060))
@@ -62,7 +63,7 @@
 
 #define FMV_PICSZ (*((unsigned long *)0x0E04052))
 #define FMV_PICRT (*((unsigned short *)0x0E04056)
-#define FMV_TIMECD (*((unsigned long *)0x0E04058))
+#define FMV_PICTIMECD (*((unsigned long *)0x0E04058))
 #define FMV_TMPREF (*((unsigned short *)0x0E0405C))
 
 /* --- IMS66490 CD-Interface Controller (CDIC) ---  */

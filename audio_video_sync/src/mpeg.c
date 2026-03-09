@@ -10,13 +10,18 @@
 #include "mpeg.h"
 #include "video.h"
 #include "hwreg.h"
-#include "cross_audio.h"
-#include "cross_video.h"
+
 #include "graphics.h"
 
 /* Have at least one of them enabled! */
-#define ENABLE_VIDEO
 #define ENABLE_AUDIO
+#define ENABLE_VIDEO
+/* #define HOSTPLAY */
+
+#ifdef HOSTPLAY
+#include "cross_audio.h"
+#include "cross_video.h"
+#endif
 
 extern int errno;
 
@@ -32,11 +37,17 @@ int maPath, mvPath, maMapId, mvMapId;
 static int mpegFile = -1;
 
 static PCB mpegPcb;
+static PCL mvPcl[MV_PCL_COUNT];
+static PCL maPcl[MA_PCL_COUNT];
+static PCL *mvCil[32];
+static PCL *maCil[16];
 
 static STAT_BLK mvStatus;
 static STAT_BLK maStatus;
 
 static MVmapDesc *mvDesc;
+
+char *mpegDataBuffer;
 
 void initMpegAudio()
 {
@@ -56,11 +67,27 @@ void initMpegPcb(channel) int channel;
 {
 	int i;
 
+	for (i = 0; i < 32; i++)
+	{
+		mvCil[i] = (PCL *)mvPcl;
+	}
+
+	for (i = 0; i < 16; i++)
+	{
+		maCil[i] = (PCL *)maPcl;
+	}
+
 	mpegPcb.PCB_Video = NULL;
 	mpegPcb.PCB_Audio = NULL;
+#ifdef ENABLE_VIDEO
+	mpegPcb.PCB_Video = mvCil;
+#endif
+#ifdef ENABLE_AUDIO
+	mpegPcb.PCB_Audio = maCil;
+#endif
 	mpegPcb.PCB_Data = NULL;
 	mpegPcb.PCB_Sig = MPEG_SIG_PCB;
-	mpegPcb.PCB_Chan = 0x00000001 << channel;
+	mpegPcb.PCB_Chan = 0xffffffff;
 	mpegPcb.PCB_AChan = 0;
 	mpegPcb.PCB_Rec = 1; /* assume that there is only 1 EOR */
 	mpegPcb.PCB_Stat = 0;
@@ -90,11 +117,44 @@ int length;	  /* buffer size in number of sectors */
 	pcl->PCL_Cnt = 0;
 }
 
+void initMpegPcls()
+{
+	char *address = mpegDataBuffer;
+	int i;
+
+	for (i = 0; i < MV_PCL_COUNT; i++)
+	{
+		initMpegPcl(
+			&(mvPcl[i]),
+			MV_SIG_PCL,
+			&(mvPcl[(i + 1) % MV_PCL_COUNT]),
+			address,
+			1);
+		address += MPEG_SECTOR_SIZE;
+	}
+
+	for (i = 0; i < MA_PCL_COUNT; i++)
+	{
+		initMpegPcl(
+			&(maPcl[i]),
+			MA_SIG_PCL,
+			&(maPcl[(i + 1) % MA_PCL_COUNT]),
+			address,
+			1);
+		address += MPEG_SECTOR_SIZE;
+	}
+}
+
 void initMpeg()
 {
 	initMpegAudio();
 	initMpegVideo();
 
+	mpegDataBuffer = (char *)srqcmem((MV_PCL_COUNT + MA_PCL_COUNT) * MPEG_SECTOR_SIZE, SYSRAM);
+	if (!mpegDataBuffer)
+		exit(0);
+
+	initMpegPcls();
 	initMpegPcb(0);
 }
 
@@ -130,8 +190,53 @@ void FindFmvDriverStruct()
 	DEBUG(fma_dclk_adr == 0xe03010);
 }
 
-void StartSyncedPlayback()
+void playMpeg()
 {
+	int channel = 0;
+	int streamid = 0;
+	int m, s, f, lba;
+	int i = 0;
+	mpegStatus = MPP_STOP;
+
+	/* Create FMV maps */
+#ifdef HOSTPLAY
+	mvMapId = mv_create(mvPath, PLAYHOST);
+	maMapId = ma_create(maPath, PLAYHOST);
+#else
+	mvMapId = mv_create(mvPath, PLAYCD);
+	maMapId = ma_create(maPath, PLAYCD);
+#endif
+
+	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
+	printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
+	/* Setup initial FMV parameters */
+	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
+	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
+	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
+	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
+#ifdef HOSTPLAY
+	DEBUG(mv_pos(mvPath, mvMapId, 768 / 2, 560 / 2 - 128, 0));
+#else
+	DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
+#endif
+	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
+	DEBUG(mv_show(mvPath, 0));
+
+	FindFmvDriverStruct();
+
+#ifdef ENABLE_AUDIO
+	/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
+	ma_cntrl(maPath, maMapId, 0x00800080, streamid);
+	DEBUG(ma_trigger(maPath, MA_SIG_BASE | 0x1f));
+#endif
+
+	/* Init PCL, PCB */
+	initMpegPcls();
+	initMpegPcb(channel);
+
+	mpegStatus = MPP_INIT;
+
+#ifdef HOSTPLAY
 
 #ifdef ENABLE_AUDIO
 	/*DEBUG(ma_loop(maPath, maMapId, 0, cross_audio_mpg_len, 10000));*/
@@ -145,45 +250,31 @@ void StartSyncedPlayback()
 	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, maPath, 9900));
 #endif
 	printf("Started Play\n");
-}
 
-void playMpeg(path, channel) char *path;
-int channel;
-{
-	int i;
-
-	int mv_host_size;
-	int V_DTSFnd;
-	mpegStatus = MPP_STOP;
-
-	/* Create FMV maps */
-	mvMapId = mv_create(mvPath, PLAYHOST);
-	maMapId = ma_create(maPath, PLAYHOST);
-
-	mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
-	printf("playMpeg %s %d - %d %d\n", path, channel, maMapId, mvMapId);
-	/* Setup initial FMV parameters */
-	DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
-	DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
-	DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
-	DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-	DEBUG(mv_pos(mvPath, mvMapId, 768 / 2, 560 / 2 - 128, 0));
-	DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
-	DEBUG(mv_show(mvPath, 0));
-
-	FindFmvDriverStruct();
-
+#else
+	/* Setup MPEG Playback */
+#ifdef ENABLE_VIDEO
+	DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl, &mvStatus, MV_NO_SYNC, 0));
+#endif
 #ifdef ENABLE_AUDIO
-	/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
-	ma_cntrl(maPath, maMapId, 0x00800080, 0L);
-	DEBUG(ma_trigger(maPath, MA_SIG_BASE | 0x1f));
+	DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC, 0));
 #endif
 
-	/* Init PCL, PCB */
-	initMpegPcb(channel);
+	/* Assume we are not running from serial stub first */
+	mpegFile = open("/cd/SPACEACE.RTF", _READ);
+	if (mpegFile < 0)
+	{
+		/* We are running via serial stub on real hardware and Top Gun Disc? */
+		printf("Serial stub?\n");
+		/* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
+		mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); /* Top Gun*/
+	}
+	DEBUG(mpegFile >= 0);
 
-	mpegStatus = MPP_INIT;
-	StartSyncedPlayback();
+	DEBUG(lseek(mpegFile, 0, 0));
+	DEBUG(ss_play(mpegFile, &mpegPcb));
+	printf("Started Play %d\n", mpegFile);
+#endif
 }
 
 void stopMpeg()
@@ -191,17 +282,19 @@ void stopMpeg()
 	if (mpegStatus == MPP_STOP)
 		return;
 
+#ifdef ENABLE_VIDEO
 	DEBUG(mv_abort(mvPath));
+#endif
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_abort(maPath));
 #endif
 
+#ifdef ENABLE_VIDEO
 	DEBUG(mv_hide(mvPath));
-	DEBUG(mv_release(mvPath));
+#endif
 
 #ifdef ENABLE_AUDIO
 	DEBUG(ma_cntrl(maPath, maMapId, 0x80808080, 0L));
-	DEBUG(ma_release(maPath));
 #endif
 
 	close(mpegFile);
@@ -211,6 +304,8 @@ void stopMpeg()
 
 	mpegStatus = MPP_STOP;
 }
+
+MotionStatus mvstat;
 
 void mpegPic()
 {
@@ -226,38 +321,84 @@ void mpegPic()
 	offsetX = (768 - width) / 2;
 	offsetY = (560 - height) / 2;
 
+	DEBUG(mv_pos(mvPath, mvMapId, offsetX, offsetY, 0));
+	DEBUG(mv_window(mvPath, mvMapId, 0, 0, width, height, 0));
 	DEBUG(mv_show(mvPath, 0));
+
+#ifdef ENABLE_AUDIO
+	/* Setup volume */
+	DEBUG(ma_status(maPath, &maInfo));
+
+	printf("AUDIO: %X\n", maInfo.MAS_Head);
+	if ((maInfo.MAS_Head & MA_AUD_MODE) == MA_AUD_STEREO)
+	{
+		/* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
+		ma_cntrl(maPath, maMapId, 0x00800080, 0L);
+	}
+	else
+	{
+		/* LtoL=MUTE: LtoR=MUTE: RtoR=LOUD: RtoL=LOUD */
+		ma_cntrl(maPath, maMapId, 0x80800000, 0L);
+	}
+#endif
 
 	mpegStatus = MPP_PLAY;
 }
 
 int sigcnt = 0;
 
-static unsigned long recordings[100][4];
-static int recindex = 0;
+static unsigned long regdump[600][20];
+static int regdump_index = 0;
+static int recording_stopped = 0;
+
+void print_registers()
+{
+	int i, j;
+	recording_stopped = 1;
+
+	for (i = 0; i < regdump_index; i++)
+	{
+		printf("%3d ", i);
+		for (j = 0; j <= 14; j++)
+		{
+			printf(" %08x", regdump[i][j]);
+		}
+
+		printf("\n");
+	}
+}
+
 static unsigned long last_dclk = 0;
+
+unsigned short fma_sigcodebuf[8];
+unsigned short fma_sigcodebuf_wrpos = 0;
+unsigned short fma_sigcodebuf_rdpos = 0;
+
+unsigned short fmv_sigcodebuf[8];
+unsigned short fmv_sigcodebuf_wrpos = 0;
+unsigned short fmv_sigcodebuf_rdpos = 0;
 
 int mpegSignal(sigCode)
 int sigCode;
 {
+	static int finished_playback_blank_cnt = 0;
+
 	if (sigCode == MPEG_SIG_PCB)
 	{
 		/* Occurs when playback has finished */
 		printf("PCB %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig, maStatus.asy_stat);
+		/* print_registers(); */
 	}
 	else if (sigCode == MA_SIG_STAT)
 	{
-		int i;
 		printf("MA2 %x\n", maStatus.asy_stat);
-
-		for (i = 0; i < recindex; i++)
-		{
-			printf("V %x %d %d %d\n", recordings[i][0], recordings[i][1], recordings[i][2], recordings[i][3]);
-		}
 	}
 	else if (sigCode == MV_SIG_STAT)
 	{
 		printf("MV2 %x\n", mvStatus.asy_stat);
+#ifdef HOSTPLAY
+		finished_playback_blank_cnt = 10;
+#endif
 	}
 	else if (sigCode == MV_SIG_PCL)
 	{
@@ -268,68 +409,152 @@ int sigCode;
 	else if ((sigCode & 0xf000) == MA_SIG_BASE)
 	{
 		/* printf("MA %x\n", sigCode); */
+		/* if (sigCode & (MA_TRIG_DEC | MA_TRIG_UNF | MA_TRIG_EOI)) */
+		{
+			fma_sigcodebuf[fma_sigcodebuf_wrpos] = sigCode;
+			fma_sigcodebuf_wrpos = (fma_sigcodebuf_wrpos + 1) & 7;
+		}
 	}
 	else if ((sigCode & 0xf000) == MV_SIG_BASE)
 	{
-		int full_cnt = 0;
-		int err_cnt = 0;
-		int i;
-
+		/* if (sigCode & (MV_TRIG_BUF | MV_TRIG_LPD | MV_TRIG_NIS | MV_TRIG_PIC)) */
 		{
-			MotionStatus stat;
-#if 1
-			static int i;
+			fmv_sigcodebuf[fmv_sigcodebuf_wrpos] = sigCode;
+			fmv_sigcodebuf_wrpos = (fmv_sigcodebuf_wrpos + 1) & 7;
+		}
 
-			if (recindex < 99)
-			{
-				unsigned long dclk = FMA_DCLK;
-				unsigned long diff = dclk - last_dclk;
+		if (sigCode & MV_TRIG_NIS)
+		{
+			MotionStatus mvstat;
+			DEBUG(mv_status(mvPath, &mvstat));
+			printf("NIS %x\n", mvstat.MVS_ImgSz);
+		}
 
-				recordings[recindex][0] = sigCode;
-				recordings[recindex][1] = FMV_PICS_IN_FIFO;
-				recordings[recindex][2] = full_cnt;
-				recordings[recindex][3] = diff;
-				recindex++;
+		if (sigCode & MV_TRIG_PIC)
+		{
+			static int piccnt = 0;
 
-				last_dclk = dclk;
-			}
-
-#else
-			DEBUG(mv_status(mvPath, &stat));
-			printf("V %x %d %d %d\n", sigCode, FMV_PICS_IN_FIFO, full_cnt, stat.MVS_PicRt);
-#endif
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
+
+#ifndef HOSTPLAY
+			piccnt++;
+			if (piccnt == 80)
+			{
+				print_registers();
+			}
+#endif
 		}
 	}
 	else if (sigCode == SIG_BLANK)
 	{
-
+		if (finished_playback_blank_cnt)
+		{
+			finished_playback_blank_cnt--;
+			if (!finished_playback_blank_cnt)
+				print_registers();
+		}
+		dc_ssig(videoPath, SIG_BLANK, 0);
 	}
 }
 
 void poll_state()
 {
+	if (regdump_index > 580 || recording_stopped)
+		return;
+
 	if (fdrvs1_static)
 	{
 		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
-		static int e_occured = 0;
+		unsigned long dclk = FMA_DCLK;
+		unsigned short pics = FMV_PICS_IN_FIFO;
+		unsigned short dts = FMV_DTS;
+		unsigned long imgsz = FMV_IMGSZ;
+		unsigned long picsz = FMV_PICSZ;
+		unsigned long md_imgsz = mvDesc->MD_ImgSz;
+		unsigned long md_timecd = mvDesc->MD_TimeCd;
+		unsigned short md_tmpref = mvDesc->MD_TmpRef;
+		unsigned char md_picrt = mvDesc->MD_PicRt;
+		unsigned short tmpref = FMV_TMPREF;
+		unsigned long pictimecd = FMV_PICTIMECD;
+		unsigned long imgtimecd = FMV_IMGTIMECD;
 
-		if (!e_occured && V_BufStat == 0xe)
+		static unsigned short last_pics;
+		static unsigned long last_dts;
+		static unsigned long last_picsz;
+		static unsigned long last_reg_imgsz;
+		static unsigned long last_bufstat;
+		static unsigned long last_md_imgsz;
+		static unsigned long last_md_timecd;
+		static unsigned short last_md_tmpref;
+		static unsigned char last_md_picrt;
+		static unsigned short last_tmpref;
+		static unsigned long last_pictimecd;
+		static unsigned long last_imgtimecd;
+
+		static int reset_after_event = 0;
+		unsigned long dclkdiff = dclk - last_dclk;
+
+		if ((dts != last_dts) ||
+			(pics != last_pics) ||
+			(last_bufstat != V_BufStat) ||
+			(last_picsz != picsz) ||
+			(last_reg_imgsz != imgsz) ||
+			(fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
+			(fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos) ||
+			(last_md_imgsz != md_imgsz) ||
+			(last_md_timecd != md_timecd) ||
+			(last_md_tmpref != md_tmpref) ||
+			(last_md_picrt != md_picrt) ||
+			(last_tmpref != tmpref) ||
+			(last_pictimecd != pictimecd) ||
+			(last_imgtimecd != imgtimecd) ||
+			(reset_after_event && dclkdiff > 850))
 		{
-			int i;
-			int full_cnt = 0;
-			unsigned long dclk = FMA_DCLK;
-			unsigned long diff = dclk - last_dclk;
+			regdump[regdump_index][0] = dts;
+			regdump[regdump_index][1] = pics;
+			regdump[regdump_index][2] = V_BufStat;
+			regdump[regdump_index][3] = (fma_sigcodebuf_rdpos == fma_sigcodebuf_wrpos) ? 0 : fma_sigcodebuf[fma_sigcodebuf_rdpos];
+			regdump[regdump_index][4] = (fmv_sigcodebuf_rdpos == fmv_sigcodebuf_wrpos) ? 0 : fmv_sigcodebuf[fmv_sigcodebuf_rdpos];
+			regdump[regdump_index][5] = imgsz;
+			regdump[regdump_index][6] = picsz;
+			regdump[regdump_index][7] = md_imgsz;
+			regdump[regdump_index][8] = md_timecd;
+			regdump[regdump_index][9] = md_tmpref;
+			regdump[regdump_index][10] = md_picrt;
+			regdump[regdump_index][11] = tmpref;
+			regdump[regdump_index][12] = pictimecd;
+			regdump[regdump_index][13] = imgtimecd;
+			regdump[regdump_index][14] = dclkdiff;
 
-			recordings[recindex][0] = 1;
-			recordings[recindex][1] = FMV_PICS_IN_FIFO;
-			recordings[recindex][2] = full_cnt;
-			recordings[recindex][3] = diff;
-			recindex++;
+			regdump_index++;
 
+			last_dts = dts;
+			last_pics = pics;
+			last_bufstat = V_BufStat;
 			last_dclk = dclk;
-			e_occured = 1;
+			last_picsz = picsz;
+			last_reg_imgsz = imgsz;
+			last_md_imgsz = md_imgsz;
+			last_md_timecd = md_timecd;
+			last_md_tmpref = md_tmpref;
+			last_md_picrt = md_picrt;
+			last_tmpref = tmpref;
+			last_pictimecd = pictimecd;
+			last_imgtimecd = imgtimecd;
+
+			reset_after_event = 0;
+
+			if (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos)
+			{
+				fma_sigcodebuf_rdpos = (fma_sigcodebuf_rdpos + 1) & 7;
+				reset_after_event = 1;
+			}
+			if (fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos)
+			{
+				fmv_sigcodebuf_rdpos = (fmv_sigcodebuf_rdpos + 1) & 7;
+				reset_after_event = 1;
+			}
 		}
 	}
 }
