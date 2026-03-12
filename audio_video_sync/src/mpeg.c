@@ -16,7 +16,8 @@
 /* Have at least one of them enabled! */
 #define ENABLE_AUDIO
 #define ENABLE_VIDEO
-/* #define HOSTPLAY */
+#define HOSTPLAY
+#define DO_PAUSE
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -240,14 +241,14 @@ void playMpeg()
 
 #ifdef ENABLE_AUDIO
 	/*DEBUG(ma_loop(maPath, maMapId, 0, cross_audio_mpg_len, 10000));*/
-	DEBUG(ma_hostplay(maPath, maMapId, cross_audio_mpg_len, cross_audio_mpg, 0, &maStatus, -2, 0));
+	DEBUG(ma_hostplay(maPath, maMapId, cross_audio_mpg_len, cross_audio_mpg, 0, &maStatus, MV_NO_SYNC, 0));
 	DEBUG(ma_cntrl(maPath, maMapId, 0x00800080, 0L));
 #endif
 
 #ifdef ENABLE_VIDEO
 	/* Without mv_loop, the decoder will stop and we can't scroll through the picture */
 	/* DEBUG(mv_loop(mvPath, mvMapId, 0, cross_video_mpg_len, 10000)); */
-	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, maPath, 9900));
+	DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len, cross_video_mpg, 0, &mvStatus, MV_NO_SYNC, 0));
 #endif
 	printf("Started Play\n");
 
@@ -267,7 +268,8 @@ void playMpeg()
 		/* We are running via serial stub on real hardware and Top Gun Disc? */
 		printf("Serial stub?\n");
 		/* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
-		mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); /* Top Gun*/
+		/* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
+		mpegFile = open("/cd/seq2.rtf", _READ);					/* Addams Family Disc 2 */
 	}
 	DEBUG(mpegFile >= 0);
 
@@ -359,7 +361,7 @@ void print_registers()
 	for (i = 0; i < regdump_index; i++)
 	{
 		printf("%3d ", i);
-		for (j = 0; j <= 14; j++)
+		for (j = 0; j <= 16; j++)
 		{
 			printf(" %08x", regdump[i][j]);
 		}
@@ -382,6 +384,7 @@ int mpegSignal(sigCode)
 int sigCode;
 {
 	static int finished_playback_blank_cnt = 0;
+	static int restart_playback_blank_cnt = 0;
 
 	if (sigCode == MPEG_SIG_PCB)
 	{
@@ -437,8 +440,16 @@ int sigCode;
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
 
-#ifndef HOSTPLAY
 			piccnt++;
+#ifdef DO_PAUSE
+			if (piccnt == 5)
+			{
+				DEBUG(mv_pause(mvPath));
+				restart_playback_blank_cnt = 10;
+			}
+#endif
+
+#ifndef HOSTPLAY
 			if (piccnt == 80)
 			{
 				print_registers();
@@ -454,6 +465,16 @@ int sigCode;
 			if (!finished_playback_blank_cnt)
 				print_registers();
 		}
+#ifdef DO_PAUSE
+		if (restart_playback_blank_cnt)
+		{
+			restart_playback_blank_cnt--;
+			if (!restart_playback_blank_cnt)
+			{
+				DEBUG(mv_continue(mvPath, 0));
+			}
+		}
+#endif
 		dc_ssig(videoPath, SIG_BLANK, 0);
 	}
 }
@@ -466,6 +487,9 @@ void poll_state()
 	if (fdrvs1_static)
 	{
 		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+		int V_Status = *(unsigned short *)(((char *)fdrvs1_static) + 0x136);
+		int V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+
 		unsigned long dclk = FMA_DCLK;
 		unsigned short pics = FMV_PICS_IN_FIFO;
 		unsigned short dts = FMV_DTS;
@@ -479,11 +503,14 @@ void poll_state()
 		unsigned long pictimecd = FMV_PICTIMECD;
 		unsigned long imgtimecd = FMV_IMGTIMECD;
 
+		static unsigned long last_V_BufStat;
+		static unsigned long last_V_Status;
+		static unsigned long last_V_Stat;
+		
 		static unsigned short last_pics;
 		static unsigned long last_dts;
 		static unsigned long last_picsz;
 		static unsigned long last_reg_imgsz;
-		static unsigned long last_bufstat;
 		static unsigned long last_md_imgsz;
 		static unsigned long last_md_timecd;
 		static unsigned short last_md_tmpref;
@@ -497,7 +524,9 @@ void poll_state()
 
 		if ((dts != last_dts) ||
 			(pics != last_pics) ||
-			(last_bufstat != V_BufStat) ||
+			(last_V_BufStat != V_BufStat) ||
+			(last_V_Status != V_Status) ||
+			(last_V_Stat != V_Stat) ||
 			(last_picsz != picsz) ||
 			(last_reg_imgsz != imgsz) ||
 			(fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
@@ -525,13 +554,17 @@ void poll_state()
 			regdump[regdump_index][11] = tmpref;
 			regdump[regdump_index][12] = pictimecd;
 			regdump[regdump_index][13] = imgtimecd;
-			regdump[regdump_index][14] = dclkdiff;
+			regdump[regdump_index][14] = V_Status;
+			regdump[regdump_index][15] = V_Stat;
+			regdump[regdump_index][16] = dclkdiff;
 
 			regdump_index++;
 
 			last_dts = dts;
 			last_pics = pics;
-			last_bufstat = V_BufStat;
+			last_V_BufStat = V_BufStat;
+			last_V_Status = V_Status;
+			last_V_Stat = V_Stat;
 			last_dclk = dclk;
 			last_picsz = picsz;
 			last_reg_imgsz = imgsz;

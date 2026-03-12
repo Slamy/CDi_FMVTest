@@ -1,6 +1,6 @@
 # FMV Audio & Video Sync
 
-Plays a very short MPEG file on repeat.
+Plays a very short MPEG file and records register and driver states.
 It contains a small white block for 5 frames and a sine wave at the same time.
 
 This example can be used to check the synchronization between MPEG audio and MPEG video.
@@ -10,6 +10,11 @@ The vertical synchronization is visible, as well as the square that goes from th
 
 ![Recoding of Audio and Video using sound hardware](example_recording.png)
 
-It should be noted that for unknown reasons, there are 9 frames with white pixel data.
-Since 5 frames contain a white square, I would have expected 10 frames...
+After playback, the recording is printed over serial port and recorded into `log_vmpeg`.
+For MiSTer and other emulators, perform a manual copy.
+Python can be used to convert the recordings into a VCD file for viewing in GTKWave
 
+    python -m venv venv
+    venv/bin/python -m pip install cs2vcd
+    venv/bin/python tovcd.py
+    gtkwave wave.gtkw

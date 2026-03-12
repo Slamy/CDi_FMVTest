@@ -16,7 +16,11 @@ signals=[("dts", 32),
          ("FMV_TMPREF", 16),
          ("FMV_PICTIMECD", 32),
          ("FMV_IMGTIMECD", 32),
+         ("V_Status", 16),
+         
+         ("V_Stat", 16),
          ]
+         
 
 def readlog(path, writer):
     rows = []
@@ -40,13 +44,13 @@ def readlog(path, writer):
     changes = []
 
     # Initial state
-    last = rows[0][1:15]
+    last = rows[0][1:17]
     for i, vals in enumerate(last):
         changes.append((sigs[i], times[0], vals))
 
     # Proceed the timeline
     for t, r in zip(times, rows):
-        vals = r[1:15]
+        vals = r[1:17]
         for i, (old, new) in enumerate(zip(last, vals)):
             if new != old:
                 changes.append((sigs[i], t, new))

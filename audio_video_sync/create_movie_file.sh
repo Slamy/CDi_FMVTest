@@ -15,7 +15,7 @@ ffmpeg -y -i temp_video.m1v \
 # 2 Sectors 11 + 5
 
 ffmpeg -y -i clip.mpg \
-    -packetsize 2304 -muxpreload 0.44 \
+    -packetsize 2304 -muxpreload 0.30 \
     -ar 44100 -ac 1 \
     -codec:a mp2 -b:a 32k \
     -vn \
