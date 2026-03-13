@@ -1,19 +1,19 @@
 [*]
 [*] GTKWave Analyzer v3.3.126 (w)1999-2026 BSI
-[*] Thu Mar 12 19:58:54 2026
+[*] Thu Mar 12 21:02:08 2026
 [*]
 [dumpfile] "/home/andre/GIT/Nobelia/audio_video_sync/out.vcd"
-[dumpfile_mtime] "Thu Mar 12 19:58:24 2026"
-[dumpfile_size] 6979
+[dumpfile_mtime] "Thu Mar 12 20:56:10 2026"
+[dumpfile_size] 6977
 [savefile] "/home/andre/GIT/Nobelia/audio_video_sync/wave.gtkw"
 [timestart] 0
-[size] 2560 1348
+[size] 1920 1152
 [pos] -1 -1
-*-16.733910 272400 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+*-17.148054 764600 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 209
 [signals_width] 340
 [sst_expanded] 1
-[sst_vpaned_height] 418
+[sst_vpaned_height] 349
 @200
 -mister
 @22
@@ -25,9 +25,13 @@ log_mister.FMV_PICS_IN_FIFO[7:0]
 log_mister.FMV_PICTIMECD[31:0]
 log_mister.FMV_Sig[15:0]
 log_mister.FMV_TMPREF[15:0]
+@24
 log_mister.V_BufStat[7:0]
+@22
 log_mister.V_Stat[15:0]
+@23
 log_mister.V_Status[15:0]
+@22
 log_mister.dts[31:0]
 log_mister.md_imgsz[31:0]
 log_mister.md_picrt[7:0]
@@ -35,7 +39,7 @@ log_mister.md_timecd[31:0]
 log_mister.md_tmpref[15:0]
 @200
 -vmpeg
-@23
+@22
 log_vmpeg.FMA_Sig[15:0]
 log_vmpeg.FMV_IMGSZ[31:0]
 log_vmpeg.FMV_IMGTIMECD[31:0]
@@ -44,7 +48,9 @@ log_vmpeg.FMV_PICS_IN_FIFO[7:0]
 log_vmpeg.FMV_PICTIMECD[31:0]
 log_vmpeg.FMV_Sig[15:0]
 log_vmpeg.FMV_TMPREF[15:0]
+@24
 log_vmpeg.V_BufStat[7:0]
+@22
 log_vmpeg.V_Stat[15:0]
 log_vmpeg.V_Status[15:0]
 log_vmpeg.dts[31:0]

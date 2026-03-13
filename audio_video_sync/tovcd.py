@@ -32,6 +32,7 @@ def readlog(path, writer):
                 rows.append([int(x,16) for x in parts])
 
     # compute cumulative time
+    # 900 -> 20 ms (50 Hz)
     time = 0
     times = [0]
     for r in rows[1:]:
