@@ -16,7 +16,7 @@
 /* Have at least one of them enabled! */
 #define ENABLE_AUDIO
 #define ENABLE_VIDEO
-#define HOSTPLAY
+/* #define HOSTPLAY */
 #define DO_PAUSE
 
 #ifdef HOSTPLAY
@@ -273,7 +273,7 @@ void playMpeg()
 	}
 	DEBUG(mpegFile >= 0);
 
-	DEBUG(lseek(mpegFile, 0, 0));
+	DEBUG(lseek(mpegFile, 0x8d65800, 0)); /* Mamushka! */
 	DEBUG(ss_play(mpegFile, &mpegPcb));
 	printf("Started Play %d\n", mpegFile);
 #endif
@@ -349,7 +349,7 @@ void mpegPic()
 
 int sigcnt = 0;
 
-static unsigned long regdump[600][20];
+static unsigned long regdump[600][25];
 static int regdump_index = 0;
 static int recording_stopped = 0;
 
@@ -361,7 +361,7 @@ void print_registers()
 	for (i = 0; i < regdump_index; i++)
 	{
 		printf("%3d ", i);
-		for (j = 0; j <= 16; j++)
+		for (j = 0; j <= 21; j++)
 		{
 			printf(" %08x", regdump[i][j]);
 		}
@@ -379,6 +379,9 @@ unsigned short fma_sigcodebuf_rdpos = 0;
 unsigned short fmv_sigcodebuf[8];
 unsigned short fmv_sigcodebuf_wrpos = 0;
 unsigned short fmv_sigcodebuf_rdpos = 0;
+
+int do_pause = 0;
+static int piccnt = 0;
 
 int mpegSignal(sigCode)
 int sigCode;
@@ -435,22 +438,21 @@ int sigCode;
 
 		if (sigCode & MV_TRIG_PIC)
 		{
-			static int piccnt = 0;
 
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
 
 			piccnt++;
 #ifdef DO_PAUSE
-			if (piccnt == 5)
+			if (piccnt == 10)
 			{
-				DEBUG(mv_pause(mvPath));
+				do_pause = 1;
 				restart_playback_blank_cnt = 10;
 			}
 #endif
 
 #ifndef HOSTPLAY
-			if (piccnt == 80)
+			if (piccnt == 30)
 			{
 				print_registers();
 			}
@@ -479,16 +481,37 @@ int sigCode;
 	}
 }
 
+int recording_not_yet_started = 1;
+
 void poll_state()
 {
-	if (regdump_index > 580 || recording_stopped)
+	if (do_pause)
+	{
+		DEBUG(mv_pause(mvPath));
+		do_pause = 0;
+	}
+
+	if (recording_not_yet_started)
+	{
+		unsigned char V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+		if (V_BufStat == 0x21)
+		{
+			recording_not_yet_started = 0;
+		}
+	}
+
+	if (regdump_index > 580 || recording_stopped || recording_not_yet_started)
 		return;
 
 	if (fdrvs1_static)
 	{
-		int V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
-		int V_Status = *(unsigned short *)(((char *)fdrvs1_static) + 0x136);
-		int V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+		unsigned char V_BufStat = *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
+		unsigned short V_Status = *(unsigned short *)(((char *)fdrvs1_static) + 0x136);
+		unsigned short V_Stat = *(unsigned short *)(((char *)fdrvs1_static) + 0x134);
+		unsigned long V_PausedSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x144);
+		unsigned long V_SCR = *(unsigned long *)(((char *)fdrvs1_static) + 0xca);
+		unsigned long V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
+		unsigned short V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
 		unsigned long dclk = FMA_DCLK;
 		unsigned short pics = FMV_PICS_IN_FIFO;
@@ -506,7 +529,11 @@ void poll_state()
 		static unsigned long last_V_BufStat;
 		static unsigned long last_V_Status;
 		static unsigned long last_V_Stat;
-		
+		static unsigned long last_V_PausedSCR;
+		static unsigned long last_V_SCR;
+		static unsigned long last_V_LastSCR;
+		static unsigned short last_V_DTSVal;
+
 		static unsigned short last_pics;
 		static unsigned long last_dts;
 		static unsigned long last_picsz;
@@ -538,6 +565,10 @@ void poll_state()
 			(last_tmpref != tmpref) ||
 			(last_pictimecd != pictimecd) ||
 			(last_imgtimecd != imgtimecd) ||
+			(last_V_PausedSCR != V_PausedSCR) ||
+			(last_V_SCR != V_SCR) ||
+			(last_V_LastSCR != V_LastSCR) ||
+			(last_V_DTSVal != V_DTSVal) ||
 			(reset_after_event && dclkdiff > 850))
 		{
 			regdump[regdump_index][0] = dts;
@@ -556,15 +587,28 @@ void poll_state()
 			regdump[regdump_index][13] = imgtimecd;
 			regdump[regdump_index][14] = V_Status;
 			regdump[regdump_index][15] = V_Stat;
-			regdump[regdump_index][16] = dclkdiff;
+			regdump[regdump_index][16] = V_PausedSCR;
+			regdump[regdump_index][17] = V_SCR;
+			regdump[regdump_index][18] = V_LastSCR;
+			regdump[regdump_index][19] = V_DTSVal;
+			regdump[regdump_index][20] = piccnt;
+			
+			regdump[regdump_index][21] = dclkdiff;
 
 			regdump_index++;
 
 			last_dts = dts;
 			last_pics = pics;
+
 			last_V_BufStat = V_BufStat;
 			last_V_Status = V_Status;
 			last_V_Stat = V_Stat;
+
+			last_V_PausedSCR = V_PausedSCR;
+			last_V_SCR = V_SCR;
+			last_V_LastSCR = V_LastSCR;
+			last_V_DTSVal = V_DTSVal;
+
 			last_dclk = dclk;
 			last_picsz = picsz;
 			last_reg_imgsz = imgsz;
