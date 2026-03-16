@@ -25,6 +25,8 @@ signals=[("dts", 32),
          ("V_DTSVal", 16),
 
          ("piccnt", 16),
+         ("fullpcl", 8),
+
          ]
 
 

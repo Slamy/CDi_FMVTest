@@ -26,7 +26,7 @@
 #define FMV_IMGRT (*((unsigned short *)0x0E04006))
 #define FMV_IMGTIMECD (*((unsigned long *)0x0E04008))
 
-#define FMV_R5E (*((unsigned short *)0x0E0405E)) /* STS */
+#define FMV_STS (*((unsigned short *)0x0E0405E)) /* STS */
 #define FMV_IER (*((unsigned short *)0x0E04060))
 #define FMV_ISR (*((unsigned short *)0x0E04062))
 #define FMV_TCNT (*((unsigned short *)0x0E04064))

@@ -18,6 +18,7 @@
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
 #define DO_PAUSE
+/* #define PRINT_REGISTERS */
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -352,22 +353,47 @@ int sigcnt = 0;
 static unsigned long regdump[600][25];
 static int regdump_index = 0;
 static int recording_stopped = 0;
+/* clang-format off */
+static char regsize[]={
+	32,8,8,16,16,
+	32,32,32,32,16,
+	8,16,32,32,16,
+	16,32,32,32,16,
+	16,8,
+
+	/* Timestamp */
+	32
+};
+/* clang-format on */
 
 void print_registers()
 {
 	int i, j;
 	recording_stopped = 1;
 
+#ifdef PRINT_REGISTERS
 	for (i = 0; i < regdump_index; i++)
 	{
 		printf("%3d ", i);
-		for (j = 0; j <= 21; j++)
+		for (j = 0; j <= 22; j++)
 		{
-			printf(" %08x", regdump[i][j]);
+			switch (regsize[j])
+			{
+			case 8:
+				printf(" %02x", regdump[i][j]);
+				break;
+			case 16:
+				printf(" %04x", regdump[i][j]);
+				break;
+			case 32:
+				printf(" %08x", regdump[i][j]);
+				break;
+			}
 		}
 
 		printf("\n");
 	}
+#endif
 }
 
 static unsigned long last_dclk = 0;
@@ -438,6 +464,18 @@ int sigCode;
 
 		if (sigCode & MV_TRIG_PIC)
 		{
+#ifndef PRINT_REGISTERS
+			unsigned char full_cnt = 0;
+			int i;
+			for (i = 0; i < MV_PCL_COUNT; i++)
+			{
+				if (mvPcl[i].PCL_Ctrl & 0x01)
+				{
+					full_cnt++;
+				}
+			}
+			printf("PIC %x %d\n", sigCode, full_cnt);
+#endif
 
 			if (mpegStatus == MPP_INIT)
 				mpegPic();
@@ -571,6 +609,16 @@ void poll_state()
 			(last_V_DTSVal != V_DTSVal) ||
 			(reset_after_event && dclkdiff > 850))
 		{
+			unsigned char full_cnt = 0;
+			int i;
+			for (i = 0; i < MV_PCL_COUNT; i++)
+			{
+				if (mvPcl[i].PCL_Ctrl & 0x01)
+				{
+					full_cnt++;
+				}
+			}
+
 			regdump[regdump_index][0] = dts;
 			regdump[regdump_index][1] = pics;
 			regdump[regdump_index][2] = V_BufStat;
@@ -592,8 +640,9 @@ void poll_state()
 			regdump[regdump_index][18] = V_LastSCR;
 			regdump[regdump_index][19] = V_DTSVal;
 			regdump[regdump_index][20] = piccnt;
-			
-			regdump[regdump_index][21] = dclkdiff;
+			regdump[regdump_index][21] = full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
+
+			regdump[regdump_index][22] = dclkdiff;
 
 			regdump_index++;
 
