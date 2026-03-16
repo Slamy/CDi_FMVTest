@@ -359,7 +359,7 @@ static char regsize[]={
 	32,32,32,32,16,
 	8,16,32,32,16,
 	16,32,32,32,16,
-	16,8,
+	16,8,16,16,
 
 	/* Timestamp */
 	32
@@ -375,7 +375,7 @@ void print_registers()
 	for (i = 0; i < regdump_index; i++)
 	{
 		printf("%3d ", i);
-		for (j = 0; j <= 22; j++)
+		for (j = 0; j <= 24; j++)
 		{
 			switch (regsize[j])
 			{
@@ -563,11 +563,13 @@ void poll_state()
 		unsigned long V_LastSCR = *(unsigned long *)(((char *)fdrvs1_static) + 0x15c);
 		unsigned short V_DTSVal = *(unsigned short *)(((char *)fdrvs1_static) + 0x1c0);
 
+		unsigned short picrate = FMV_PIC_RATE;
 		unsigned long dclk = FMA_DCLK;
 		unsigned short pics = FMV_PICS_IN_FIFO;
 		unsigned short dts = FMV_DTS;
 		unsigned long imgsz = FMV_IMGSZ;
 		unsigned long picsz = FMV_PICSZ;
+		unsigned short vdi_cmd = FMV_VDI_CMD;
 		unsigned long md_imgsz = mvDesc->MD_ImgSz;
 		unsigned long md_timecd = mvDesc->MD_TimeCd;
 		unsigned short md_tmpref = mvDesc->MD_TmpRef;
@@ -653,8 +655,10 @@ void poll_state()
 			regdump[regdump_index][19] = V_DTSVal;
 			regdump[regdump_index][20] = piccnt;
 			regdump[regdump_index][21] = full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
-
-			regdump[regdump_index][22] = dclkdiff;
+			regdump[regdump_index][22] = vdi_cmd;
+			regdump[regdump_index][23] = picrate;
+			
+			regdump[regdump_index][24] = dclkdiff;
 
 			regdump_index++;
 

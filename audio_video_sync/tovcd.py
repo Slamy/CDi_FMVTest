@@ -26,7 +26,8 @@ signals=[("dts", 32),
 
          ("piccnt", 16),
          ("fullpcl", 8),
-
+         ("GEN_VDI_CMD", 16),
+         ("PIC_RATE", 16),
          ]
 
 

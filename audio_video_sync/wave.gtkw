@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.126 (w)1999-2026 BSI
-[*] Sun Mar 15 11:56:04 2026
+[*] Mon Mar 16 16:05:27 2026
 [*]
 [dumpfile] "/home/andre/GIT/Nobelia/audio_video_sync/out.vcd"
-[dumpfile_mtime] "Sun Mar 15 11:54:52 2026"
-[dumpfile_size] 33251
+[dumpfile_mtime] "Mon Mar 16 16:01:53 2026"
+[dumpfile_size] 44015
 [savefile] "/home/andre/GIT/Nobelia/audio_video_sync/wave.gtkw"
-[timestart] 0
+[timestart] 105000
 [size] 2560 1348
-[pos] -321 -99
-*-18.071987 826600 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-16.080423 284800 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 209
 [signals_width] 340
 [sst_expanded] 1
@@ -25,26 +25,22 @@ log_mister.FMV_PICS_IN_FIFO[7:0]
 log_mister.FMV_PICTIMECD[31:0]
 log_mister.FMV_Sig[15:0]
 log_mister.FMV_TMPREF[15:0]
-@24
+log_mister.GEN_VDI_CMD[15:0]
+log_mister.PIC_RATE[15:0]
 log_mister.V_BufStat[7:0]
-@22
 log_mister.V_DTSVal[15:0]
-@24
 log_mister.V_LastSCR[31:0]
-log_mister.V_SCR[31:0]
-@22
 log_mister.V_PausedSCR[31:0]
+log_mister.V_SCR[31:0]
 log_mister.V_Stat[15:0]
 log_mister.V_Status[15:0]
 log_mister.dts[31:0]
+log_mister.fullpcl[7:0]
 log_mister.md_imgsz[31:0]
 log_mister.md_picrt[7:0]
 log_mister.md_timecd[31:0]
 log_mister.md_tmpref[15:0]
-@24
 log_mister.piccnt[15:0]
-@22
-log_mister.fullpcl[7:0]
 @200
 -vmpeg
 @22
@@ -56,25 +52,23 @@ log_vmpeg.FMV_PICS_IN_FIFO[7:0]
 log_vmpeg.FMV_PICTIMECD[31:0]
 log_vmpeg.FMV_Sig[15:0]
 log_vmpeg.FMV_TMPREF[15:0]
-@24
+log_vmpeg.GEN_VDI_CMD[15:0]
+@23
+log_vmpeg.PIC_RATE[15:0]
+@22
 log_vmpeg.V_BufStat[7:0]
-@22
 log_vmpeg.V_DTSVal[15:0]
-@24
 log_vmpeg.V_LastSCR[31:0]
-log_vmpeg.V_SCR[31:0]
-@22
 log_vmpeg.V_PausedSCR[31:0]
+log_vmpeg.V_SCR[31:0]
 log_vmpeg.V_Stat[15:0]
 log_vmpeg.V_Status[15:0]
 log_vmpeg.dts[31:0]
+log_vmpeg.fullpcl[7:0]
 log_vmpeg.md_imgsz[31:0]
 log_vmpeg.md_picrt[7:0]
 log_vmpeg.md_timecd[31:0]
 log_vmpeg.md_tmpref[15:0]
-@24
 log_vmpeg.piccnt[15:0]
-@23
-log_vmpeg.fullpcl[7:0]
 [pattern_trace] 1
 [pattern_trace] 0
