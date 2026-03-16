@@ -18,7 +18,7 @@
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
 #define DO_PAUSE
-/* #define PRINT_REGISTERS */
+#define PRINT_REGISTERS
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -487,10 +487,22 @@ int sigCode;
 				do_pause = 1;
 				restart_playback_blank_cnt = 10;
 			}
+
+			if (piccnt == 20)
+			{
+				do_pause = 1;
+				restart_playback_blank_cnt = 10;
+			}
+
+			if (piccnt == 30)
+			{
+				do_pause = 1;
+				restart_playback_blank_cnt = 10;
+			}
 #endif
 
 #ifndef HOSTPLAY
-			if (piccnt == 30)
+			if (piccnt == 40)
 			{
 				print_registers();
 			}
