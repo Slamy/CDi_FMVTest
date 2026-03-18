@@ -18,7 +18,7 @@
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
 #define DO_PAUSE
-#define PRINT_REGISTERS
+/* #define PRINT_REGISTERS */
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -350,7 +350,7 @@ void mpegPic()
 
 int sigcnt = 0;
 
-static unsigned long regdump[600][25];
+static unsigned long regdump[500][25];
 static int regdump_index = 0;
 static int recording_stopped = 0;
 /* clang-format off */
@@ -465,16 +465,25 @@ int sigCode;
 		if (sigCode & MV_TRIG_PIC)
 		{
 #ifndef PRINT_REGISTERS
-			unsigned char full_cnt = 0;
+			unsigned char full_mv_cnt = 0;
+			unsigned char full_ma_cnt = 0;
 			int i;
 			for (i = 0; i < MV_PCL_COUNT; i++)
 			{
 				if (mvPcl[i].PCL_Ctrl & 0x01)
 				{
-					full_cnt++;
+					full_mv_cnt++;
 				}
 			}
-			printf("PIC %x %d\n", sigCode, full_cnt);
+			for (i = 0; i < MA_PCL_COUNT; i++)
+			{
+				if (mvPcl[i].PCL_Ctrl & 0x01)
+				{
+					full_ma_cnt++;
+				}
+			}
+
+			printf("PIC %x %d %d\n", sigCode, full_mv_cnt, full_ma_cnt);
 #endif
 
 			if (mpegStatus == MPP_INIT)
@@ -482,22 +491,20 @@ int sigCode;
 
 			piccnt++;
 #ifdef DO_PAUSE
-			if (piccnt == 10)
-			{
-				do_pause = 1;
-				restart_playback_blank_cnt = 10;
-			}
-
 			if (piccnt == 20)
 			{
 				do_pause = 1;
-				restart_playback_blank_cnt = 10;
+				restart_playback_blank_cnt = 20;
 			}
-
-			if (piccnt == 30)
+			if (piccnt == 40)
 			{
 				do_pause = 1;
-				restart_playback_blank_cnt = 10;
+				restart_playback_blank_cnt = 20;
+			}
+			if (piccnt == 60)
+			{
+				do_pause = 1;
+				restart_playback_blank_cnt = 20;
 			}
 #endif
 
@@ -523,7 +530,9 @@ int sigCode;
 			restart_playback_blank_cnt--;
 			if (!restart_playback_blank_cnt)
 			{
+				DEBUG(ss_cont(mpegFile));
 				DEBUG(mv_continue(mvPath, 0));
+				DEBUG(ma_continue(maPath));
 			}
 		}
 #endif
@@ -538,6 +547,8 @@ void poll_state()
 	if (do_pause)
 	{
 		DEBUG(mv_pause(mvPath));
+		DEBUG(ma_pause(maPath));
+		DEBUG(ss_pause(mpegFile));
 		do_pause = 0;
 	}
 
@@ -550,7 +561,7 @@ void poll_state()
 		}
 	}
 
-	if (regdump_index > 580 || recording_stopped || recording_not_yet_started)
+	if (regdump_index > 480 || recording_stopped || recording_not_yet_started)
 		return;
 
 	if (fdrvs1_static)
@@ -623,13 +634,14 @@ void poll_state()
 			(last_V_DTSVal != V_DTSVal) ||
 			(reset_after_event && dclkdiff > 850))
 		{
-			unsigned char full_cnt = 0;
+			unsigned char full_mv_cnt = 0;
+			unsigned char full_ma_cnt = 0;
 			int i;
 			for (i = 0; i < MV_PCL_COUNT; i++)
 			{
 				if (mvPcl[i].PCL_Ctrl & 0x01)
 				{
-					full_cnt++;
+					full_mv_cnt++;
 				}
 			}
 
@@ -654,10 +666,10 @@ void poll_state()
 			regdump[regdump_index][18] = V_LastSCR;
 			regdump[regdump_index][19] = V_DTSVal;
 			regdump[regdump_index][20] = piccnt;
-			regdump[regdump_index][21] = full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
+			regdump[regdump_index][21] = full_mv_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
 			regdump[regdump_index][22] = vdi_cmd;
 			regdump[regdump_index][23] = picrate;
-			
+
 			regdump[regdump_index][24] = dclkdiff;
 
 			regdump_index++;

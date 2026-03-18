@@ -3,8 +3,8 @@
 
 #define SIG_BLANK 0x0100
 
-#define MV_PCL_COUNT 75
-#define MA_PCL_COUNT 5
+#define MV_PCL_COUNT 100
+#define MA_PCL_COUNT 70
 #define MPEG_SECTOR_SIZE 2324
 #define MPEG_CHANNEL 0
 
