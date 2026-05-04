@@ -371,6 +371,8 @@ unsigned short fmv_sigcodebuf_rdpos = 0;
 
 int do_pause = 0;
 static int piccnt = 0;
+int inform_normalized = 0;
+int frames_until_normalized = 0;
 
 int mpegSignal(sigCode)
 int sigCode;
@@ -433,10 +435,12 @@ int sigCode;
             DEBUG(mv_status(mvPath, &mvstat));
             DEBUG(ma_status(maPath, &mastat));
 
+            /*
             if ((piccnt & 7) == 1) {
                 printf("PIC %x %d %d %x\n", sigCode, full_mv_cnt, full_ma_cnt,
                        FMV_SCR);
             }
+            */
 #endif
 
             if (mpegStatus == MPP_INIT)
@@ -467,7 +471,23 @@ int sigCode;
             if (piccnt == 100) {
                 DEBUG(mv_chspeed(mvPath, MV_SPEED_NORMAL, 0, NULL));
                 printf("1\n");
+                inform_normalized = 1;
+                frames_until_normalized = 0;
             }
+
+            if (inform_normalized && full_mv_cnt <= 1) {
+                /*
+                 * 210/05 + VMPEG             174
+                 * MiSTer fastest vsync out   58
+                 * MiSTer with frame skip     46
+                 */
+
+                printf("Normal after %d frames\n", frames_until_normalized);
+                inform_normalized = 0;
+            }
+
+            if (inform_normalized)
+                frames_until_normalized++;
 #endif
 
 #ifndef HOSTPLAY
