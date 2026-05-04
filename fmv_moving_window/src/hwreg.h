@@ -42,7 +42,7 @@
 #define FMV_RF4 (*((unsigned short *)0x0E040F4))
 #define FMV_GEN_SYNC_DIFF (*((unsigned short *)0x0E0409C))
 #define FMV_R92 (*((unsigned short *)0x0E04092))
-#define FMV_RC6 (*((unsigned short *)0x0E040C6))
+#define FMV_SCR (*((unsigned short *)0x0E040C6))
 #define FMV_GEN_DEC_CMD (*((unsigned short *)0x0E04088))
 #define FMV_VID_CMD (*((unsigned short *)0x0E0408A))
 #define FMV_VDI_CMD (*((unsigned short *)0x0E0408C))

@@ -14,10 +14,11 @@
 #include "graphics.h"
 
 /* Have at least one of them enabled! */
-/* #define ENABLE_AUDIO */
+#define ENABLE_AUDIO
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
-#define DO_PAUSE
+/* #define DO_PAUSE */
+#define DO_SLOWMO
 /* #define PRINT_REGISTERS */
 
 #ifdef HOSTPLAY
@@ -47,6 +48,7 @@ static STAT_BLK mvStatus;
 static STAT_BLK maStatus;
 
 static MVmapDesc *mvDesc;
+static MAmapDesc *maDesc;
 
 char *mpegDataBuffer;
 
@@ -192,6 +194,8 @@ void playMpeg() {
 #endif
 
     mvDesc = (MVmapDesc *)mv_info(mvPath, mvMapId);
+    maDesc = (MAmapDesc *)ma_info(maPath, maMapId);
+
     printf("playMpeg %d - %d %d\n", channel, maMapId, mvMapId);
     /* Setup initial FMV parameters */
     DEBUG(mv_trigger(mvPath, MV_TRIG_MASK));
@@ -210,7 +214,7 @@ void playMpeg() {
 
 #ifdef ENABLE_AUDIO
     /* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
-    ma_cntrl(maPath, maMapId, 0x00800080, streamid);
+    ma_cntrl(maPath, maMapId, 0x00800080, 0L);
     DEBUG(ma_trigger(maPath, MA_SIG_BASE | 0x1f));
 #endif
 
@@ -242,25 +246,18 @@ void playMpeg() {
     /* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
     DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl,
-                    &mvStatus, MV_NO_SYNC, 0));
+                    &mvStatus, -2, 0));
 #endif
 #ifdef ENABLE_AUDIO
-    DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC,
-                    0));
+    DEBUG(
+        ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, mvPath, 0));
 #endif
 
     /* Assume we are not running from serial stub first */
-    mpegFile = open("/cd/SPACEACE.RTF", _READ);
-    if (mpegFile < 0) {
-        /* We are running via serial stub on real hardware and Top Gun Disc? */
-        printf("Serial stub?\n");
-        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
-        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
-        mpegFile = open("/cd/seq2.rtf", _READ); /* Addams Family Disc 2 */
-    }
+    mpegFile = open("/cd/VIDEO01.RTF", _READ);
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0x8d65800, 0)); /* Mamushka! */
+    DEBUG(lseek(mpegFile, 0, 0));
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
@@ -312,20 +309,6 @@ void mpegPic() {
     DEBUG(mv_window(mvPath, mvMapId, 0, 0, width, height, 0));
     DEBUG(mv_show(mvPath, 0));
 
-#ifdef ENABLE_AUDIO
-    /* Setup volume */
-    DEBUG(ma_status(maPath, &maInfo));
-
-    printf("AUDIO: %X\n", maInfo.MAS_Head);
-    if ((maInfo.MAS_Head & MA_AUD_MODE) == MA_AUD_STEREO) {
-        /* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
-        ma_cntrl(maPath, maMapId, 0x00800080, 0L);
-    } else {
-        /* LtoL=MUTE: LtoR=MUTE: RtoR=LOUD: RtoL=LOUD */
-        ma_cntrl(maPath, maMapId, 0x80800000, 0L);
-    }
-#endif
-
     mpegStatus = MPP_PLAY;
 }
 
@@ -349,6 +332,9 @@ static char regsize[]={
 
 void print_registers() {
     int i, j;
+
+    if (recording_stopped)
+        return;
     recording_stopped = 1;
 
 #ifdef PRINT_REGISTERS
@@ -391,12 +377,14 @@ int sigCode;
 {
     static int finished_playback_blank_cnt = 0;
     static int restart_playback_blank_cnt = 0;
+    MotionStatus mvstat;
+    MA_status mastat;
 
     if (sigCode == MPEG_SIG_PCB) {
         /* Occurs when playback has finished */
         printf("PCB %x %x %x\n", mpegPcb.PCB_Stat, mpegPcb.PCB_Sig,
                maStatus.asy_stat);
-        /* print_registers(); */
+        print_registers();
     } else if (sigCode == MA_SIG_STAT) {
         printf("MA2 %x\n", maStatus.asy_stat);
     } else if (sigCode == MV_SIG_STAT) {
@@ -422,7 +410,6 @@ int sigCode;
         }
 
         if (sigCode & MV_TRIG_NIS) {
-            MotionStatus mvstat;
             DEBUG(mv_status(mvPath, &mvstat));
             printf("NIS %x\n", mvstat.MVS_ImgSz);
         }
@@ -443,7 +430,13 @@ int sigCode;
                 }
             }
 
-            printf("PIC %x %d %d\n", sigCode, full_mv_cnt, full_ma_cnt);
+            DEBUG(mv_status(mvPath, &mvstat));
+            DEBUG(ma_status(maPath, &mastat));
+
+            if ((piccnt & 7) == 1) {
+                printf("PIC %x %d %d %x\n", sigCode, full_mv_cnt, full_ma_cnt,
+                       FMV_SCR);
+            }
 #endif
 
             if (mpegStatus == MPP_INIT)
@@ -462,6 +455,18 @@ int sigCode;
             if (piccnt == 60) {
                 do_pause = 1;
                 restart_playback_blank_cnt = 20;
+            }
+#endif
+
+#ifdef DO_SLOWMO
+            if (piccnt == 50) {
+                DEBUG(mv_chspeed(mvPath, 3, 0, NULL));
+                printf("0\n");
+            }
+
+            if (piccnt == 100) {
+                DEBUG(mv_chspeed(mvPath, MV_SPEED_NORMAL, 0, NULL));
+                printf("1\n");
             }
 #endif
 
@@ -496,6 +501,10 @@ int sigCode;
 int recording_not_yet_started = 1;
 
 void poll_state() {
+    int full_cnt = 0;
+    static int cd_is_paused = 0;
+    int i;
+
     if (do_pause) {
         DEBUG(mv_pause(mvPath));
 #ifdef ENABLE_AUDIO
@@ -504,6 +513,27 @@ void poll_state() {
         DEBUG(ss_pause(mpegFile));
         do_pause = 0;
     }
+
+#ifdef DO_SLOWMO
+    for (i = 0; i < MV_PCL_COUNT; i++) {
+        if (mvPcl[i].PCL_Ctrl & 0x01) {
+            full_cnt++;
+        }
+    }
+
+    if (full_cnt >= 100 && !cd_is_paused) {
+        print_registers();
+        printf("pause!\n");
+        DEBUG(ss_pause(mpegFile));
+        cd_is_paused = 1;
+    }
+
+    if (full_cnt <= 50 && cd_is_paused) {
+        printf("cont!\n");
+        DEBUG(ss_cont(mpegFile));
+        cd_is_paused = 0;
+    }
+#endif
 
     if (recording_not_yet_started) {
         unsigned char V_BufStat =

@@ -12,11 +12,13 @@
 #define FMA_R0A (*((unsigned short *)0x0E0300A))    /* current stream? */
 #define FMA_IVEC (*((unsigned short *)0x0E0300C))   /* typically 0x807b ? */
 #define FMA_R0E (*((unsigned short *)0x0E0300E))    /* a counter?*/
-#define FMA_DCLK (*((unsigned long *)0x0E03010))    /* only read, 45 kHz counter */
-#define FMA_HDR (*((unsigned long *)0x0E03014))     /* MPEG Audio Header e.g. 0x00fd50c0*/
-#define FMA_RUN (*((unsigned short *)0x0E03018))    /* typically 1 */
-#define FMA_ISR (*((unsigned short *)0x0E0301A))    /* interrupt status */
-#define FMA_IER (*((unsigned short *)0x0E0301C))    /* typically 0x13d or 13f */
+#define FMA_DCLK (*((unsigned long *)0x0E03010)) /* only read, 45 kHz counter  \
+                                                  */
+#define FMA_HDR                                                                \
+    (*((unsigned long *)0x0E03014)) /* MPEG Audio Header e.g. 0x00fd50c0*/
+#define FMA_RUN (*((unsigned short *)0x0E03018)) /* typically 1 */
+#define FMA_ISR (*((unsigned short *)0x0E0301A)) /* interrupt status */
+#define FMA_IER (*((unsigned short *)0x0E0301C)) /* typically 0x13d or 13f */
 #define FMA_DSPA (*((unsigned short *)0x0E03022))
 #define FMA_DSPD (*((unsigned short *)0x0E03024))
 
@@ -36,6 +38,7 @@
 #define FMV_HPIX (*((unsigned short *)0x0E04072))
 #define FMV_SYSCMD (*((unsigned short *)0x0E040C0))
 #define FMV_VIDCMD (*((unsigned short *)0x0E040C2))
+#define FMV_SCR (*((unsigned short *)0x0E040C6))
 #define FMV_PROG (*((unsigned short *)0x0E040DA))
 #define FMV_XFER (*((unsigned short *)0x0E040DE))
 
@@ -43,7 +46,6 @@
 #define FMV_RF4 (*((unsigned short *)0x0E040F4))
 #define FMV_GEN_SYNC_DIFF (*((unsigned short *)0x0E0409C))
 #define FMV_R92 (*((unsigned short *)0x0E04092))
-#define FMV_RC6 (*((unsigned short *)0x0E040C6))
 #define FMV_GEN_DEC_CMD (*((unsigned short *)0x0E04088))
 #define FMV_VID_CMD (*((unsigned short *)0x0E0408A))
 #define FMV_VDI_CMD (*((unsigned short *)0x0E0408C))
@@ -106,7 +108,8 @@
 #define CDIC_ABUF (*((unsigned short *)0x303FF4))
 #define CDIC_XBUF (*((unsigned short *)0x303FF6))
 #define CDIC_DMACTL (*((unsigned short *)0x303FF8))
-#define CDIC_AUDCTL (*((unsigned short *)0x303FFA)) /* Called Z buffer in MAME */
+#define CDIC_AUDCTL                                                            \
+    (*((unsigned short *)0x303FFA)) /* Called Z buffer in MAME */
 #define CDIC_IVEC (*((unsigned short *)0x303FFC))
 #define CDIC_DBUF (*((unsigned short *)0x303FFE))
 
