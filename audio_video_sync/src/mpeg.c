@@ -17,9 +17,9 @@
 #define ENABLE_AUDIO
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
-/* #define DO_PAUSE */
-#define DO_SLOWMO
-/* #define PRINT_REGISTERS */
+#define DO_PAUSE
+/* #define DO_SLOWMO */
+#define PRINT_REGISTERS
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -146,6 +146,22 @@ void initMpeg() {
     initMpegPcb(0);
 }
 
+unsigned long *fmadrv_static = 0;
+
+void FindFmaDriverStruct() {
+    int i;
+
+    if (fmadrv_static != 0)
+        return;
+
+    for (i = 0x00dfa000; i < 0x00dfd000; i += 4) {
+        if ((*(unsigned long *)i) == 0xe03000) {
+            printf("Found fmadriv at %x\n", i);
+            fmadrv_static = (unsigned long *)i;
+        }
+    }
+}
+
 unsigned long *fdrvs1_static = 0;
 
 void FindFmvDriverStruct() {
@@ -211,6 +227,7 @@ void playMpeg() {
     DEBUG(mv_show(mvPath, 0));
 
     FindFmvDriverStruct();
+    FindFmaDriverStruct();
 
 #ifdef ENABLE_AUDIO
     /* LtoL=LOUD: LtoR=MUTE: RtoR=LOUD: RtoL=MUTE */
@@ -313,17 +330,18 @@ void mpegPic() {
 }
 
 int sigcnt = 0;
+#define REGDUMP_SIZE 1000
+static unsigned long regdump[REGDUMP_SIZE][25];
 
-static unsigned long regdump[500][25];
 static int regdump_index = 0;
 static int recording_stopped = 0;
 /* clang-format off */
 static char regsize[]={
 	32,8,8,16,16,
-	32,32,32,32,16,
-	8,16,32,32,16,
+	32,16,16,16,0,
+	0,0,0,0,16,
 	16,32,32,32,16,
-	16,8,16,16,
+	16,8,0,16,
 
 	/* Timestamp */
 	32
@@ -342,6 +360,9 @@ void print_registers() {
         printf("%3d ", i);
         for (j = 0; j <= 24; j++) {
             switch (regsize[j]) {
+            case 0:
+                printf(" %x", regdump[i][j]);
+                break;
             case 8:
                 printf(" %02x", regdump[i][j]);
                 break;
@@ -373,6 +394,8 @@ int do_pause = 0;
 static int piccnt = 0;
 int inform_normalized = 0;
 int frames_until_normalized = 0;
+
+static int cd_is_paused = 0;
 
 int mpegSignal(sigCode)
 int sigCode;
@@ -448,29 +471,35 @@ int sigCode;
 
             piccnt++;
 #ifdef DO_PAUSE
-            if (piccnt == 20) {
+            if (piccnt == 70 - 2) {
                 do_pause = 1;
-                restart_playback_blank_cnt = 20;
+                restart_playback_blank_cnt = 15;
             }
-            if (piccnt == 40) {
+            if (piccnt == 140 - 2) {
                 do_pause = 1;
-                restart_playback_blank_cnt = 20;
+                restart_playback_blank_cnt = 15;
             }
-            if (piccnt == 60) {
+            if (piccnt == 210 - 2) {
                 do_pause = 1;
-                restart_playback_blank_cnt = 20;
+                restart_playback_blank_cnt = 15;
             }
 #endif
 
 #ifdef DO_SLOWMO
-            if (piccnt == 50) {
+            if (piccnt == 60) {
                 DEBUG(mv_chspeed(mvPath, 3, 0, NULL));
                 printf("0\n");
             }
 
-            if (piccnt == 100) {
+            if (piccnt == 110) {
                 DEBUG(mv_chspeed(mvPath, MV_SPEED_NORMAL, 0, NULL));
                 printf("1\n");
+
+                if (cd_is_paused) {
+                    printf("cont2!\n");
+                    DEBUG(ss_cont(mpegFile));
+                    cd_is_paused = 0;
+                }
                 inform_normalized = 1;
                 frames_until_normalized = 0;
             }
@@ -491,7 +520,7 @@ int sigCode;
 #endif
 
 #ifndef HOSTPLAY
-            if (piccnt == 40) {
+            if (piccnt == 300) {
                 print_registers();
             }
 #endif
@@ -506,11 +535,35 @@ int sigCode;
         if (restart_playback_blank_cnt) {
             restart_playback_blank_cnt--;
             if (!restart_playback_blank_cnt) {
+                int time[3];
+                int full_cnt = 0;
+                int i;
+                for (i = 0; i < MA_PCL_COUNT; i++) {
+                    if (maPcl[i].PCL_Ctrl & 0x01) {
+                        full_cnt++;
+                    }
+                }
+
+                /* Real hardware
+                Cont on 1 8404 35
+                Cont on 0 8566 35
+                Cont on 1 6939 34
+
+                MiSTer
+                Cont on 1 28 49
+                Cont on 0 26 94
+                Cont on 0 26 94
+
+                cdiemu
+                
+                */
+                time[0] = FMA_DCLK;
                 DEBUG(ss_cont(mpegFile));
+                time[1] = FMA_DCLK;
                 DEBUG(mv_continue(mvPath, 0));
-#ifdef ENABLE_AUDIO
-                DEBUG(ma_continue(maPath));
-#endif
+                time[2] = FMA_DCLK;
+                printf("Cont on %d %d %d\n", full_cnt, time[1] - time[0],
+                       time[2] - time[1]);
             }
         }
 #endif
@@ -522,14 +575,10 @@ int recording_not_yet_started = 1;
 
 void poll_state() {
     int full_cnt = 0;
-    static int cd_is_paused = 0;
     int i;
 
     if (do_pause) {
         DEBUG(mv_pause(mvPath));
-#ifdef ENABLE_AUDIO
-        DEBUG(ma_pause(maPath));
-#endif
         DEBUG(ss_pause(mpegFile));
         do_pause = 0;
     }
@@ -563,10 +612,18 @@ void poll_state() {
         }
     }
 
-    if (regdump_index > 480 || recording_stopped || recording_not_yet_started)
+    if (regdump_index >= REGDUMP_SIZE || recording_stopped ||
+        recording_not_yet_started)
         return;
 
-    if (fdrvs1_static) {
+    if (fdrvs1_static && fmadrv_static) {
+        unsigned long FMA_addr =
+            *(unsigned long *)(((char *)fmadrv_static) + 0x122);
+        unsigned short FMA_irqen =
+            *(unsigned short *)(((char *)fmadrv_static) + 0x120);
+        unsigned short FMA_irqs =
+            *(unsigned short *)(((char *)fmadrv_static) + 0x150) & ~0x0100;
+
         unsigned char V_BufStat =
             *(unsigned char *)(((char *)fdrvs1_static) + 0x17b);
         unsigned short V_Status =
@@ -586,16 +643,11 @@ void poll_state() {
         unsigned long dclk = FMA_DCLK;
         unsigned short pics = FMV_PICS_IN_FIFO;
         unsigned short dts = FMV_DTS;
-        unsigned long imgsz = FMV_IMGSZ;
-        unsigned long picsz = FMV_PICSZ;
-        unsigned short vdi_cmd = FMV_VDI_CMD;
-        unsigned long md_imgsz = mvDesc->MD_ImgSz;
-        unsigned long md_timecd = mvDesc->MD_TimeCd;
-        unsigned short md_tmpref = mvDesc->MD_TmpRef;
-        unsigned char md_picrt = mvDesc->MD_PicRt;
-        unsigned short tmpref = FMV_TMPREF;
-        unsigned long pictimecd = FMV_PICTIMECD;
-        unsigned long imgtimecd = FMV_IMGTIMECD;
+        unsigned short fma_cmd = FMA_CMD;
+
+        static unsigned long last_FMA_addr;
+        static unsigned short last_FMA_irqen;
+        static unsigned short last_FMA_irqs;
 
         static unsigned long last_V_BufStat;
         static unsigned long last_V_Status;
@@ -607,29 +659,17 @@ void poll_state() {
 
         static unsigned short last_pics;
         static unsigned long last_dts;
-        static unsigned long last_picsz;
         static unsigned long last_reg_imgsz;
-        static unsigned long last_md_imgsz;
-        static unsigned long last_md_timecd;
-        static unsigned short last_md_tmpref;
-        static unsigned char last_md_picrt;
-        static unsigned short last_tmpref;
-        static unsigned long last_pictimecd;
-        static unsigned long last_imgtimecd;
 
         static int reset_after_event = 0;
         unsigned long dclkdiff = dclk - last_dclk;
 
         if ((dts != last_dts) || (pics != last_pics) ||
             (last_V_BufStat != V_BufStat) || (last_V_Status != V_Status) ||
-            (last_V_Stat != V_Stat) || (last_picsz != picsz) ||
-            (last_reg_imgsz != imgsz) ||
+            (last_V_Stat != V_Stat) || (last_FMA_addr != FMA_addr) ||
+            (last_FMA_irqen != FMA_irqen) || (last_FMA_irqs != FMA_irqs) ||
             (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
             (fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos) ||
-            (last_md_imgsz != md_imgsz) || (last_md_timecd != md_timecd) ||
-            (last_md_tmpref != md_tmpref) || (last_md_picrt != md_picrt) ||
-            (last_tmpref != tmpref) || (last_pictimecd != pictimecd) ||
-            (last_imgtimecd != imgtimecd) ||
             (last_V_PausedSCR != V_PausedSCR) || (last_V_SCR != V_SCR) ||
             (last_V_LastSCR != V_LastSCR) || (last_V_DTSVal != V_DTSVal) ||
             (reset_after_event && dclkdiff > 850)) {
@@ -653,15 +693,15 @@ void poll_state() {
                 (fmv_sigcodebuf_rdpos == fmv_sigcodebuf_wrpos)
                     ? 0
                     : fmv_sigcodebuf[fmv_sigcodebuf_rdpos];
-            regdump[regdump_index][5] = imgsz;
-            regdump[regdump_index][6] = picsz;
-            regdump[regdump_index][7] = md_imgsz;
-            regdump[regdump_index][8] = md_timecd;
-            regdump[regdump_index][9] = md_tmpref;
-            regdump[regdump_index][10] = md_picrt;
-            regdump[regdump_index][11] = tmpref;
-            regdump[regdump_index][12] = pictimecd;
-            regdump[regdump_index][13] = imgtimecd;
+            regdump[regdump_index][5] = FMA_addr;
+            regdump[regdump_index][6] = FMA_irqen;
+            regdump[regdump_index][7] = FMA_irqs;
+            regdump[regdump_index][8] = fma_cmd;
+            regdump[regdump_index][9] = 0;
+            regdump[regdump_index][10] = 0;
+            regdump[regdump_index][11] = 0;
+            regdump[regdump_index][12] = 0;
+            regdump[regdump_index][13] = 0;
             regdump[regdump_index][14] = V_Status;
             regdump[regdump_index][15] = V_Stat;
             regdump[regdump_index][16] = V_PausedSCR;
@@ -671,12 +711,16 @@ void poll_state() {
             regdump[regdump_index][20] = piccnt;
             regdump[regdump_index][21] =
                 full_mv_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
-            regdump[regdump_index][22] = vdi_cmd;
+            regdump[regdump_index][22] = 0;
             regdump[regdump_index][23] = picrate;
 
             regdump[regdump_index][24] = dclkdiff;
 
             regdump_index++;
+
+            last_FMA_addr = FMA_addr;
+            last_FMA_irqen = FMA_irqen;
+            last_FMA_irqs = FMA_irqs;
 
             last_dts = dts;
             last_pics = pics;
@@ -691,15 +735,6 @@ void poll_state() {
             last_V_DTSVal = V_DTSVal;
 
             last_dclk = dclk;
-            last_picsz = picsz;
-            last_reg_imgsz = imgsz;
-            last_md_imgsz = md_imgsz;
-            last_md_timecd = md_timecd;
-            last_md_tmpref = md_tmpref;
-            last_md_picrt = md_picrt;
-            last_tmpref = tmpref;
-            last_pictimecd = pictimecd;
-            last_imgtimecd = imgtimecd;
 
             reset_after_event = 0;
 
