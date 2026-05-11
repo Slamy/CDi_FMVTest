@@ -19,7 +19,7 @@
 /* #define HOSTPLAY */
 #define DO_PAUSE
 /* #define DO_SLOWMO */
-#define PRINT_REGISTERS
+/* #define PRINT_REGISTERS */
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -471,15 +471,7 @@ int sigCode;
 
             piccnt++;
 #ifdef DO_PAUSE
-            if (piccnt == 70 - 2) {
-                do_pause = 1;
-                restart_playback_blank_cnt = 15;
-            }
-            if (piccnt == 140 - 2) {
-                do_pause = 1;
-                restart_playback_blank_cnt = 15;
-            }
-            if (piccnt == 210 - 2) {
+            if ((piccnt % 70) == 2) {
                 do_pause = 1;
                 restart_playback_blank_cnt = 15;
             }
@@ -555,12 +547,12 @@ int sigCode;
                 Cont on 0 26 94
 
                 cdiemu
-                
+
                 */
                 time[0] = FMA_DCLK;
-                DEBUG(ss_cont(mpegFile));
-                time[1] = FMA_DCLK;
                 DEBUG(mv_continue(mvPath, 0));
+                time[1] = FMA_DCLK;
+                DEBUG(ss_cont(mpegFile));
                 time[2] = FMA_DCLK;
                 printf("Cont on %d %d %d\n", full_cnt, time[1] - time[0],
                        time[2] - time[1]);
