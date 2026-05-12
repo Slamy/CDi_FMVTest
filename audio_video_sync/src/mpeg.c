@@ -19,7 +19,7 @@
 /* #define HOSTPLAY */
 #define DO_PAUSE
 /* #define DO_SLOWMO */
-/* #define PRINT_REGISTERS */
+#define PRINT_REGISTERS
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -330,7 +330,7 @@ void mpegPic() {
 }
 
 int sigcnt = 0;
-#define REGDUMP_SIZE 1000
+#define REGDUMP_SIZE 2000
 static unsigned long regdump[REGDUMP_SIZE][25];
 
 static int regdump_index = 0;
@@ -471,7 +471,15 @@ int sigCode;
 
             piccnt++;
 #ifdef DO_PAUSE
-            if ((piccnt % 70) == 2) {
+            if (piccnt == 70 - 2) {
+                do_pause = 1;
+                restart_playback_blank_cnt = 15;
+            }
+            if (piccnt == 140 - 2) {
+                do_pause = 1;
+                restart_playback_blank_cnt = 15;
+            }
+            if (piccnt == 210 - 2) {
                 do_pause = 1;
                 restart_playback_blank_cnt = 15;
             }
