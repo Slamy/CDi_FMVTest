@@ -41,52 +41,6 @@ static STAT_BLK maStatus;
 
 static MVmapDesc *mvDesc;
 
-/* MPEG-1 Pack has SCR starting at byte 4 */
-unsigned long long pack_get_scr(unsigned char *buf) {
-    unsigned long scr = 0;
-
-    ASSERT(buf[0] == 0x00); /* ensure correct header */
-    ASSERT(buf[1] == 0x00); /* ensure correct header */
-    ASSERT(buf[2] == 0x01); /* ensure correct header */
-    ASSERT(buf[3] == 0xBA); /* ensure correct header */
-
-    ASSERT(buf[4] & 1); /* ensure marker bit */
-    ASSERT(buf[6] & 1); /* ensure marker bit */
-    ASSERT(buf[8] & 1); /* ensure marker bit */
-
-    scr = ((unsigned long long)(buf[4] & 0x0E)) << 29;
-    scr |= ((unsigned long long)buf[5]) << 22;
-    scr |= ((unsigned long long)(buf[6] & 0xFE)) << 14;
-    scr |= ((unsigned long long)buf[7]) << 7;
-    scr |= ((unsigned long long)(buf[8] & 0xFE)) >> 1;
-
-    return scr;
-}
-
-/* MPEG-1 Pack has SCR starting at byte 4 */
-void pack_set_scr(unsigned char *buf, unsigned long long scr) {
-
-    ASSERT(buf[0] == 0x00); /* ensure correct header */
-    ASSERT(buf[1] == 0x00); /* ensure correct header */
-    ASSERT(buf[2] == 0x01); /* ensure correct header */
-    ASSERT(buf[3] == 0xBA); /* ensure correct header */
-
-    ASSERT(buf[4] & 1); /* ensure marker bit */
-    ASSERT(buf[6] & 1); /* ensure marker bit */
-    ASSERT(buf[8] & 1); /* ensure marker bit */
-
-    buf[4] = 0x21 | ((scr >> 29) & 0x0E); /* '01', SCR[32..30], marker */
-    buf[5] = (scr >> 22) & 0xFF;
-    buf[6] = 0x01 | ((scr >> 14) & 0xFE); /* SCR[21..15], marker */
-    buf[7] = (scr >> 7) & 0xFF;
-    buf[8] = 0x01 | ((scr << 1) & 0xFE); /* SCR[6..0], marker */
-}
-
-/* MPEG-1 Pack has SCR starting at byte 4 */
-unsigned long long mpeg1_packet_get_pts() {}
-
-void mpeg1_packet_get_dts() {}
-
 void initMpegAudio() {
     char *devName = csd_devname(DT_MPEGA, 1); /* Get MPEG Audio Device Name */
     maPath = open(devName, 0);                /* Open MPEG Audio Device */

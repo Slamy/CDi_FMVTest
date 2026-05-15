@@ -14,7 +14,7 @@
 
 char do_fma_dma = 0;
 unsigned int int_fma_dclk = 0;
-unsigned int int_fma_status = 0;
+unsigned short int_fma_status = 0;
 char fma_irq_occured = 0;
 
 #define ASSERT(c)                                                              \
@@ -48,13 +48,10 @@ int sigCode;
     }
 }
 
-void initProgram() {}
-
 void initSystem() {
     initVideo();
     initGraphics();
     initMpeg();
-    initProgram();
 }
 
 void closeSystem() { closeVideo(); }
@@ -135,6 +132,52 @@ void print_registers() {
     }
 }
 
+/* MPEG-1 Pack has SCR starting at byte 4 */
+unsigned long long pack_get_scr(unsigned char *buf) {
+    unsigned long scr = 0;
+
+    ASSERT(buf[0] == 0x00); /* ensure correct header */
+    ASSERT(buf[1] == 0x00); /* ensure correct header */
+    ASSERT(buf[2] == 0x01); /* ensure correct header */
+    ASSERT(buf[3] == 0xBA); /* ensure correct header */
+
+    ASSERT(buf[4] & 1); /* ensure marker bit */
+    ASSERT(buf[6] & 1); /* ensure marker bit */
+    ASSERT(buf[8] & 1); /* ensure marker bit */
+
+    scr = ((unsigned long long)(buf[4] & 0x0E)) << 29;
+    scr |= ((unsigned long long)buf[5]) << 22;
+    scr |= ((unsigned long long)(buf[6] & 0xFE)) << 14;
+    scr |= ((unsigned long long)buf[7]) << 7;
+    scr |= ((unsigned long long)(buf[8] & 0xFE)) >> 1;
+
+    return scr;
+}
+
+/* MPEG-1 Pack has SCR starting at byte 4 */
+void pack_set_scr(unsigned char *buf, unsigned long long scr) {
+
+    ASSERT(buf[0] == 0x00); /* ensure correct header */
+    ASSERT(buf[1] == 0x00); /* ensure correct header */
+    ASSERT(buf[2] == 0x01); /* ensure correct header */
+    ASSERT(buf[3] == 0xBA); /* ensure correct header */
+
+    ASSERT(buf[4] & 1); /* ensure marker bit */
+    ASSERT(buf[6] & 1); /* ensure marker bit */
+    ASSERT(buf[8] & 1); /* ensure marker bit */
+
+    buf[4] = 0x21 | ((scr >> 29) & 0x0E); /* '01', SCR[32..30], marker */
+    buf[5] = (scr >> 22) & 0xFF;
+    buf[6] = 0x01 | ((scr >> 14) & 0xFE); /* SCR[21..15], marker */
+    buf[7] = (scr >> 7) & 0xFF;
+    buf[8] = 0x01 | ((scr << 1) & 0xFE); /* SCR[6..0], marker */
+}
+
+/* MPEG-1 Pack has SCR starting at byte 4 */
+unsigned long long mpeg1_packet_get_pts() {}
+
+void mpeg1_packet_get_dts() {}
+
 void runProgram() {
     unsigned long atten;
     unsigned long i;
@@ -148,6 +191,14 @@ void runProgram() {
     fma_irq_occured = 0;
     take_system();
 
+    /* Faking MA_Play */
+    FMA_STRM = 0;
+    FMA_R04 = 7;
+    states[0] = FMA_ISR;
+    FMA_IER = 0x013d;
+    FMA_CMD = 0x0002;
+
+#if 0
     FMA_IVEC = 0x807b;
 	FMA_IER = 0x013C;
 	FMA_CMD = 0x0001;
@@ -156,15 +207,15 @@ void runProgram() {
 	FMA_DSPA = 0x00;
 	FMA_DSPD = 0xf2;
 	FMA_RUN = 0x01;
-
-	FMA_STRM = 0;
-    
-    while (!fma_irq_occured)
+#endif
+    printf("barf1\n");
+    while (!fma_irq_occured && !exit_app)
         ;
+
     times[0] = int_fma_dclk;
     states[0] = int_fma_status;
     fma_irq_occured = 0;
-    while (!fma_irq_occured)
+    while (!fma_irq_occured && !exit_app)
         ;
     times[1] = int_fma_dclk;
     states[1] = int_fma_status;
