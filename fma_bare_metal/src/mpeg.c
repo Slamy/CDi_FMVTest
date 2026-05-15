@@ -10,7 +10,6 @@
 #include "graphics.h"
 #include "hwreg.h"
 #include "mpeg.h"
-#include "stereo_sine.h"
 #include "video.h"
 
 /* Have at least one of them enabled! */
@@ -120,7 +119,6 @@ void FindFmvDriverStruct() {
     /* On cdiemu with vmpega.rom it is also 0x00dfb180 */
     /* On 210/05 with VMPEG it is 0x00dfa980 */
     printf("fdrvs1_static: %x\n", fdrvs1_static);
-    printf("stereo_sine_mpg: %x\n", stereo_sine_mpg);
     dma_adr = fdrvs1_static[83];
     fma_dclk_adr = fdrvs1_static[85];
     printf("dma_adr %x\n", dma_adr);                    /* must be e04000 */
@@ -240,6 +238,5 @@ int sigCode;
         /* Event coming from MPEG Video driver */
         mpegPic();
     } else if (sigCode == SIG_BLANK) {
-        dc_ssig(videoPath, SIG_BLANK, 0);
     }
 }

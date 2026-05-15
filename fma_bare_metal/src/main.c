@@ -9,6 +9,7 @@
 #include "hwreg.h"
 #include "irq.h"
 #include "mpeg.h"
+#include "stereo_sine.h"
 #include "video.h"
 #include <signal.h>
 
@@ -71,38 +72,6 @@ void FindFmaDriverStruct() {
 
 static unsigned long regdump[200 * 3][20];
 static int regdump_index = 0;
-
-void poll_state() {
-    unsigned long addr = *(unsigned long *)(((char *)fmadrv_static) + 0x122);
-    /* unsigned short irqen = *(unsigned short *)(((char *)fmadrv_static) +
-     * 0x120); */
-    /* unsigned short irqs = *(unsigned short *)(((char *)fmadrv_static) +
-     * 0x150) & ~0x0100; */
-    unsigned long dclk = FMA_DCLK;
-
-    static unsigned long last_addr;
-    static unsigned short last_sigcode;
-    static unsigned long last_dclk;
-
-    if ((addr != last_addr) || (sigcodebuf_wrpos != sigcodebuf_rdpos)) {
-        unsigned long dclkdiff = dclk - last_dclk;
-        /* printf("Addr %lx %x %lx\n", dclkdiff, irqs, addr); */
-
-        regdump[regdump_index][0] = dclkdiff;
-        regdump[regdump_index][1] = (sigcodebuf_rdpos == sigcodebuf_wrpos)
-                                        ? 0
-                                        : sigcodebuf[sigcodebuf_rdpos];
-        regdump[regdump_index][2] = addr;
-        regdump_index++;
-
-        last_addr = addr;
-        /* last_sigcode = ma_sigcode; */
-        last_dclk = dclk;
-
-        if (sigcodebuf_wrpos != sigcodebuf_rdpos)
-            sigcodebuf_rdpos = (sigcodebuf_rdpos + 1) & 7;
-    }
-}
 
 /* Overwrite CDIC driver IRQ handling */
 void take_system() {
@@ -181,22 +150,47 @@ void pack_set_scr(unsigned char *buf, unsigned long long scr) {
 }
 
 /* MPEG-1 Pack has SCR starting at byte 4 */
-unsigned long long mpeg1_packet_get_pts() {}
+unsigned long mpeg1_packet_get_pts(unsigned char *buf) {
+    unsigned long scr = 0;
 
-void mpeg1_packet_get_dts() {}
+    scr = ((unsigned long long)(buf[0] & 0x0E)) << 29;
+    scr |= ((unsigned long long)buf[1]) << 22;
+    scr |= ((unsigned long long)(buf[2] & 0xFE)) << 14;
+    scr |= ((unsigned long long)buf[3]) << 7;
+    scr |= ((unsigned long long)(buf[4] & 0xFE)) >> 1;
+
+    return scr;
+}
+
+void mpeg1_packet_set_pts(unsigned char *buf, unsigned long long scr) {
+    buf[0] = 0x21 | ((scr >> 29) & 0x0E); /* '01', SCR[32..30], marker */
+    buf[1] = (scr >> 22) & 0xFF;
+    buf[2] = 0x01 | ((scr >> 14) & 0xFE); /* SCR[21..15], marker */
+    buf[3] = (scr >> 7) & 0xFF;
+    buf[4] = 0x01 | ((scr << 1) & 0xFE); /* SCR[6..0], marker */
+}
+
 static unsigned short last_int_fma_status = 0;
 
 void runProgram() {
     unsigned long atten;
     unsigned long i;
-    unsigned int times[2];
-    unsigned int states[2];
+    unsigned int times[3];
+    unsigned int states[3];
+    unsigned long dma_transfer_dclk = 0;
+    unsigned long upd_isr_dclk = 0;
 
+    pack_set_scr(stereo_sine_mpg, 10000);
+    mpeg1_packet_set_pts(stereo_sine_mpg + 33, 70000);
+
+    printf("pack %d\n", pack_get_scr(stereo_sine_mpg));
+    printf("pts %d\n", mpeg1_packet_get_pts(stereo_sine_mpg + 33));
+    /*                      1001101010110000    9ab0 */
+    /* 10000100000000000000110011010101100001   0x21, 0x00, 0x03, 0x35, 0x61 */
     dc_ssig(videoPath, SIG_BLANK, 0);
 
     playMpeg(0x00800080); /* Normal L2L and R2R */
 
-    fma_irq_occured = 0;
     take_system();
 
     /* Faking MA_Play */
@@ -205,56 +199,54 @@ void runProgram() {
     FMA_IER = 0x013d; /* ignore CSU, bit 7 and bit 6 */
     FMA_CMD = 0x0002; /* start decoder */
 
+    fma_irq_occured = 0;
     while (!fma_irq_occured && !exit_app)
         ;
-
     times[0] = int_fma_dclk;
     states[0] = int_fma_status;
-    fma_irq_occured = 0;
 
+    fma_irq_occured = 0;
     while (!fma_irq_occured && !exit_app)
         ;
     times[1] = int_fma_dclk;
     states[1] = int_fma_status;
 
-    printf("%x %x %x\n", states[0], states[1], times[1] - times[0]);
+    fma_irq_occured = 0;
+    while (!fma_irq_occured && !exit_app)
+        ;
+    times[2] = int_fma_dclk;
+    states[2] = int_fma_status;
+
+    printf("%x %x %d %d\n", states[0], states[1], times[1] - times[0], times[2] - times[1]);
 
     do_fma_dma = 1;
 
     vblank_cnt = 0;
     while (!exit_app && vblank_cnt < 100) {
         if (fma_irq_occured) {
-
+            if (regdump_index == 0) {
+                dma_transfer_dclk = int_fma_dclk;
+            }
+            if (int_fma_status & 0x4) {
+                upd_isr_dclk = int_fma_dclk;
+            }
             regdump[regdump_index][0] = int_fma_dclk;
             regdump[regdump_index][1] = int_fma_status;
-            regdump[regdump_index][2] = 0;
+            regdump[regdump_index][2] = upd_isr_dclk;
             regdump_index++;
 
             fma_irq_occured = 0;
-            /*
-            if (int_fma_status != last_int_fma_status) {
-                last_int_fma_status = int_fma_status;
-                printf("%x\n", int_fma_status);
-            }
-            */
         }
     }
+
+    printf("%ld\n", dma_transfer_dclk);
+    printf("%ld\n", upd_isr_dclk);
+    printf("%ld\n", (upd_isr_dclk - dma_transfer_dclk));
 
     print_registers();
     while (!exit_app)
         ;
 }
-
-/*
-100 100 1c9
-100 POLL
-182 POLL + bit7 + CSU
-100 POLL
-44 bit6 + UPD
-140 POLL + bit6
-48 bit6 + Underflow
-140 POLL + bit6
-*/
 
 int main(argc, argv)
 int argc;
