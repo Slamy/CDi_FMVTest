@@ -7,14 +7,14 @@
 
 #include "graphics.h"
 #include "hwreg.h"
+#include "irq.h"
 #include "mpeg.h"
 #include "video.h"
-#include "irq.h"
 #include <signal.h>
 
 char do_fma_dma = 0;
-unsigned int int_fma_dclk=0;
-unsigned int int_fma_status=0;
+unsigned int int_fma_dclk = 0;
+unsigned int int_fma_status = 0;
 char fma_irq_occured = 0;
 
 #define ASSERT(c)                                                              \
@@ -113,16 +113,14 @@ void poll_state() {
 }
 
 /* Overwrite CDIC driver IRQ handling */
-void take_system()
-{
-	/* TODO I don't understand why this works for assembler code. thx to cdifan */
-	store_a6();
+void take_system() {
+    /* TODO I don't understand why this works for assembler code. thx to cdifan
+     */
+    store_a6();
 
-	/* Switch to our IRQ handler */
-	*((unsigned long *)0x1EC) = FMA_IRQ;  /* vector delivered by CDIC */
+    /* Switch to our IRQ handler */
+    *((unsigned long *)0x1EC) = FMA_IRQ; /* vector delivered by CDIC */
 }
-
-
 
 void print_registers() {
     int i, j;
@@ -140,15 +138,40 @@ void print_registers() {
 void runProgram() {
     unsigned long atten;
     unsigned long i;
+    unsigned int times[2];
+    unsigned int states[2];
 
     dc_ssig(videoPath, SIG_BLANK, 0);
 
     playMpeg(0x00800080); /* Normal L2L and R2R */
-    while (playback_has_ended == 0)
-        poll_state();
 
-        
-    print_registers();
+    fma_irq_occured = 0;
+    take_system();
+
+    FMA_IVEC = 0x807b;
+	FMA_IER = 0x013C;
+	FMA_CMD = 0x0001;
+	FMA_R06 = 0x0900;
+
+	FMA_DSPA = 0x00;
+	FMA_DSPD = 0xf2;
+	FMA_RUN = 0x01;
+
+	FMA_STRM = 0;
+    
+    while (!fma_irq_occured)
+        ;
+    times[0] = int_fma_dclk;
+    states[0] = int_fma_status;
+    fma_irq_occured = 0;
+    while (!fma_irq_occured)
+        ;
+    times[1] = int_fma_dclk;
+    states[1] = int_fma_status;
+
+    printf("%x %x %x\n", states[0], states[1], times[1] - times[0]);
+
+    /* print_registers(); */
 
     while (!exit_app)
         ;

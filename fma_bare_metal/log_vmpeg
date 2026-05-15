@@ -1,12 +1,8 @@
 Video: LI="625": 0
 playMpeg  1 - 256 56512
 fdrvs1_static: dfa9b0
-stereo_sine_mpg: d0c61e
+stereo_sine_mpg: d0c620
 dma_adr 80004040
 fma_dclk_adr e03010
 Found fmadriv at dfaf70
 Started Play
-D
-  0  000a8b99 00000000 00d0c61e
-  1  00004e72 0000c014 00d0c61e
-  2  00000588 0000c008 00d0c61e

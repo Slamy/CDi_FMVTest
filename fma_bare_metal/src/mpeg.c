@@ -177,20 +177,6 @@ void FindFmvDriverStruct() {
 }
 
 void StartPlayback(unsigned long attenuation) {
-#ifdef ENABLE_AUDIO
-    /*DEBUG(ma_loop(maPath, maMapId, 0, cross_audio_mpg_len, 10000));*/
-    DEBUG(ma_hostplay(maPath, maMapId, 2304, stereo_sine_mpg, 0,
-                      &maStatus, MV_NO_SYNC, 0));
-    DEBUG(ma_cntrl(maPath, maMapId, attenuation, 0L));
-#endif
-
-#ifdef ENABLE_VIDEO
-    /* Without mv_loop, the decoder will stop and we can't scroll through the
-     * picture */
-    /* DEBUG(mv_loop(mvPath, mvMapId, 0, cross_video_mpg_len, 10000)); */
-    DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_video_mpg_len,
-                      cross_video_mpg, 0, &mvStatus, maPath, 9900));
-#endif
     printf("Started Play\n");
     playback_has_ended = 0;
 }
