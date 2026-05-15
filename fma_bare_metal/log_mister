@@ -1,0 +1,9 @@
+Video: LI="625": 0
+playMpeg  1 - 256 56016
+fdrvs1_static: dfb1b0
+stereo_sine_mpg: d0c58c
+dma_adr 80004040
+fma_dclk_adr e03010
+Found fmadriv at dfb770
+Started Play
+  0  017c284b 00000000 00d0c58c

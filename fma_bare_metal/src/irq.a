@@ -1,0 +1,55 @@
+ nam cdic_irq
+ ttl cdic_irq
+
+edition set 1
+
+ psect io68360_a,0,0,edition,0,0
+
+a6_value:
+    dc.l 0
+
+store_a6:
+    lea a6_value(pc),a0
+    move.l a6,(a0)
+    rts
+
+FMA_IRQ:
+	move.l a6,-(sp)
+	move.l a6_value(pc),a6
+	move.l d0,-(sp)
+	move.l a0,-(sp)
+
+	move.w $E0301A,d0 ; clear flags
+	move.w d0,int_fma_status(a6)
+
+	move.l $0E03010,d0
+	move.l d0,int_fma_dclk(a6)
+
+	move.b #1,fma_irq_occured(a6) ; Indicate IRQ occured
+
+	move.b do_fma_dma(a6),d0
+	bne func_fma_dma_do
+
+	move.l (sp)+,a0
+	move.l (sp)+,d0
+	move.l (sp)+,a6
+
+    rte
+
+func_fma_dma_do:
+	move.b #0,do_fma_dma(a6)
+
+	lea stereo_sine_mpg(a6),a0
+	move.l a0,$8000404c ;MAC
+	move.w #$0484,$8000404a ; Memory transfer count
+	move.b #$04,$80004046 ; SCR = 0x04
+	move.b #$12,$80004045 ; OCR	= 0x12
+	move.b #$30,$80004044 ; DCR = 0x30
+	move.b #$80,$80004047 ; CCR = 0x80
+
+	move.l (sp)+,a0
+	move.l (sp)+,d0
+	move.l (sp)+,a6
+
+    rte
+
