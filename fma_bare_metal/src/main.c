@@ -29,22 +29,17 @@ unsigned short sigcodebuf[8];
 unsigned short sigcodebuf_wrpos = 0;
 unsigned short sigcodebuf_rdpos = 0;
 
+int vblank_cnt = 0;
+
 int mainSignal(sigCode)
 int sigCode;
 {
     if (sigCode == SIGINT) {
         printf("SIGINT!\n");
         exit_app = 1;
-    } else if ((sigCode & 0xf000) == MA_SIG_BASE) {
-        /* printf("MA %x\n", sigCode); */
-        sigcodebuf[sigcodebuf_wrpos] = sigCode;
-        sigcodebuf_wrpos = (sigcodebuf_wrpos + 1) & 7;
-        /* poll_state(); */
-
-        if (sigCode & MA_TRIG_DEC)
-            printf("D\n");
-    } else {
-        mpegSignal(sigCode);
+    } else if (sigCode = SIG_BLANK) {
+        dc_ssig(videoPath, SIG_BLANK, 0);
+        vblank_cnt++;
     }
 }
 
@@ -128,6 +123,18 @@ void print_registers() {
             printf(" %08x", regdump[i][j]);
         }
 
+        /* clang-format off */
+        if (regdump[i][1] & 0x001) printf(" EOI");
+        if (regdump[i][1] & 0x002) printf(" CSU");
+        if (regdump[i][1] & 0x004) printf(" UPD");
+        if (regdump[i][1] & 0x008) printf(" UNF");
+        if (regdump[i][1] & 0x010) printf(" DEC");
+        if (regdump[i][1] & 0x020) printf(" ERR");
+        if (regdump[i][1] & 0x040) printf(" bi6");
+        if (regdump[i][1] & 0x080) printf(" bi7");
+        if (regdump[i][1] & 0x100) printf(" POLL");
+        /* clang-format on */
+
         printf("\n");
     }
 }
@@ -194,7 +201,7 @@ void runProgram() {
 
     /* Faking MA_Play */
     FMA_STRM = 0;
-    FMA_R04 = 7; /* without this, playback is not possible*/
+    FMA_R04 = 7;      /* without this, playback is not possible*/
     FMA_IER = 0x013d; /* ignore CSU, bit 7 and bit 6 */
     FMA_CMD = 0x0002; /* start decoder */
 
@@ -214,18 +221,28 @@ void runProgram() {
 
     do_fma_dma = 1;
 
-    /* print_registers(); */
-
-    while (!exit_app) {
-
+    vblank_cnt = 0;
+    while (!exit_app && vblank_cnt < 100) {
         if (fma_irq_occured) {
+
+            regdump[regdump_index][0] = int_fma_dclk;
+            regdump[regdump_index][1] = int_fma_status;
+            regdump[regdump_index][2] = 0;
+            regdump_index++;
+
             fma_irq_occured = 0;
+            /*
             if (int_fma_status != last_int_fma_status) {
                 last_int_fma_status = int_fma_status;
                 printf("%x\n", int_fma_status);
             }
+            */
         }
     }
+
+    print_registers();
+    while (!exit_app)
+        ;
 }
 
 /*
