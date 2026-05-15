@@ -177,6 +177,7 @@ void pack_set_scr(unsigned char *buf, unsigned long long scr) {
 unsigned long long mpeg1_packet_get_pts() {}
 
 void mpeg1_packet_get_dts() {}
+static unsigned short last_int_fma_status = 0;
 
 void runProgram() {
     unsigned long atten;
@@ -194,27 +195,16 @@ void runProgram() {
     /* Faking MA_Play */
     FMA_STRM = 0;
     FMA_R04 = 7;
-    states[0] = FMA_ISR;
     FMA_IER = 0x013d;
     FMA_CMD = 0x0002;
 
-#if 0
-    FMA_IVEC = 0x807b;
-	FMA_IER = 0x013C;
-	FMA_CMD = 0x0001;
-	FMA_R06 = 0x0900;
-
-	FMA_DSPA = 0x00;
-	FMA_DSPD = 0xf2;
-	FMA_RUN = 0x01;
-#endif
-    printf("barf1\n");
     while (!fma_irq_occured && !exit_app)
         ;
 
     times[0] = int_fma_dclk;
     states[0] = int_fma_status;
     fma_irq_occured = 0;
+
     while (!fma_irq_occured && !exit_app)
         ;
     times[1] = int_fma_dclk;
@@ -222,10 +212,20 @@ void runProgram() {
 
     printf("%x %x %x\n", states[0], states[1], times[1] - times[0]);
 
+    do_fma_dma = 1;
+
     /* print_registers(); */
 
-    while (!exit_app)
-        ;
+    while (!exit_app) {
+
+        if (fma_irq_occured) {
+            fma_irq_occured = 0;
+            if (int_fma_status != last_int_fma_status) {
+                last_int_fma_status = int_fma_status;
+                printf("%x\n", int_fma_status);
+            }
+        }
+    }
 }
 
 int main(argc, argv)

@@ -1,10 +1,17 @@
 Video: LI="625": 0
 playMpeg  1 - 256 56512
 fdrvs1_static: dfa9b0
-stereo_sine_mpg: d0c61e
+stereo_sine_mpg: d0c620
 dma_adr 80004040
 fma_dclk_adr e03010
 Found fmadriv at dfaf70
 Started Play
 barf1
 100 100 1c9
+100
+182
+100
+44
+140
+48
+140
