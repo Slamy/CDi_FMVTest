@@ -194,9 +194,9 @@ void runProgram() {
 
     /* Faking MA_Play */
     FMA_STRM = 0;
-    FMA_R04 = 7;
-    FMA_IER = 0x013d;
-    FMA_CMD = 0x0002;
+    FMA_R04 = 7; /* without this, playback is not possible*/
+    FMA_IER = 0x013d; /* ignore CSU, bit 7 and bit 6 */
+    FMA_CMD = 0x0002; /* start decoder */
 
     while (!fma_irq_occured && !exit_app)
         ;
@@ -227,6 +227,17 @@ void runProgram() {
         }
     }
 }
+
+/*
+100 100 1c9
+100 POLL
+182 POLL + bit7 + CSU
+100 POLL
+44 bit6 + UPD
+140 POLL + bit6
+48 bit6 + Underflow
+140 POLL + bit6
+*/
 
 int main(argc, argv)
 int argc;
