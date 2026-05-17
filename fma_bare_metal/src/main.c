@@ -207,6 +207,7 @@ void runProgram() {
     unsigned long dma_transfer_dclk = 0;
     unsigned long upd_isr_dclk = 0;
     int magic_set = 0;
+    int packs_transfered = 0;
 
     dma_addr = stereo_sine_mpg;
     for (i = 0; i < 12; i++) {
@@ -248,12 +249,13 @@ void runProgram() {
     states[2] = int_fma_status;
 
     printf("%x %x %d %d\n", states[0], states[1], times[1] - times[0],
-           times[2] - times[1]);
+           times[2]);
 
     for (i = 0; i < 2; i++) {
         unsigned long now = FMA_DCLK;
         unsigned long playback_start_scr;
         unsigned long next_play_dclk;
+        unsigned char *next_dma_addr = 0;
 
         /*
         pack_set_scr(stereo_sine_mpg, now * 2);
@@ -265,11 +267,11 @@ void runProgram() {
 
         fma_irq_occured = 0;
 
-        do_fma_dma = 1;
-        dma_addr = stereo_sine_mpg;
+        next_dma_addr = stereo_sine_mpg;
         dma_wordcnt = 1152; /* always in packs of 2304 */
-        playback_start_scr = FMA_DCLK - 30600;
-        next_play_dclk = mpeg1_packet_get_pts(dma_addr) + playback_start_scr;
+        playback_start_scr = FMA_DCLK - 20000;
+        next_play_dclk =
+            mpeg1_packet_get_pts(next_dma_addr) / 2 + playback_start_scr;
 
         vblank_cnt = 0;
         while (!exit_app) {
@@ -277,14 +279,14 @@ void runProgram() {
                 fma_irq_occured = 0;
 
 #if 1
-                if (!do_fma_dma && int_fma_dclk >= next_play_dclk) {
-                    if (!magic_set) {
-                        magic_set = 1;
-                        FMA_R04 = 0x1f;
-                    }
-                    dma_addr += 2304;
-                    next_play_dclk =
-                        mpeg1_packet_get_pts(dma_addr) + playback_start_scr;
+                if (!do_fma_dma && int_fma_dclk >= next_play_dclk &&
+                    packs_transfered < 12) {
+
+                    dma_addr = next_dma_addr;
+                    next_dma_addr += 2304;
+                    next_play_dclk = mpeg1_packet_get_pts(next_dma_addr) / 2 +
+                                     playback_start_scr;
+                    packs_transfered++;
                     do_fma_dma = 1;
                 }
 #endif
@@ -296,6 +298,12 @@ void runProgram() {
                     upd_isr_dclk = int_fma_dclk;
                 }
 
+                if (int_fma_status & 0x8) {
+                    printf("UNF\n");
+                }
+                if (int_fma_status & 0x20) {
+                    printf("ERR\n");
+                }
                 if (regdump_index < REGDUMP_SIZE) {
                     regdump[regdump_index][0] = int_fma_dclk;
                     regdump[regdump_index][1] = int_fma_status;
