@@ -11,6 +11,13 @@ ffmpeg -y -i stereo_sine.wav \
     -vn \
     stereo_sine.mpg
 
+ffmpeg -y -i oxp.wav \
+    -packetsize 2304 -muxpreload 0.44 \
+    -ar 44100 -ac 2 \
+    -codec:a mp2 -b:a 64k \
+    -vn \
+    stereo_sine.mpg
+
 xxd -i stereo_sine.mpg  > src/stereo_sine.h
 
 echo Finished
