@@ -1,36 +1,40 @@
 Video: LI="625": 0
 pack 0
 pts 39600
-pack 44303
-pts 65462
-pack 70165
-pts 91323
-pack 96026
-pts 117184
-pack 121887
-pts 143045
-pack 145397
-pts 168906
-pack 171259
-pts 194768
-pack 197120
-pts 220629
-pack 222981
-pts 246490
-pack 248842
-pts 272351
-pack 274703
-pts 298213
-pack 300565
-pts 321723
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
+pack 0
+pts 0
 playMpeg  1 - 256 12
 fdrvs1_static: dfa9b0
 dma_adr 80004040
 fma_dclk_adr e03010
 Found fmadriv at dfaf70
 Started Play
-100 100 458 1326758
+100 100 457 1325969
 UNF
-1327669
-1348165
-20496
+1326909
+1347379
+20470
+UNF
+1501455
+1521957
+20502

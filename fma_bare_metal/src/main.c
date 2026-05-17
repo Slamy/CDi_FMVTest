@@ -153,9 +153,7 @@ void pack_set_scr(unsigned char *buf, unsigned long long scr) {
     buf[8] = 0x01 | ((scr << 1) & 0xFE); /* SCR[6..0], marker */
 }
 
-/* MPEG-1 Pack has SCR starting at byte 4 */
-unsigned long mpeg1_packet_get_pts(unsigned char *buf) {
-    unsigned long pts = 0;
+unsigned char *mpeg1_pack_find_pts(unsigned char *buf) {
     unsigned int i;
     buf += 11; /* skip MPEG-1 pack*/
     for (i = 0; i < 20; i++) {
@@ -165,7 +163,7 @@ unsigned long mpeg1_packet_get_pts(unsigned char *buf) {
     }
 
     if (!(buf[0] == 0 && buf[1] == 0 && buf[2] == 1 && buf[3] == 0xC0)) {
-        return -1;
+        return NULL;
     }
     buf += 6;
     /* check for stuffing bytes*/
@@ -177,8 +175,19 @@ unsigned long mpeg1_packet_get_pts(unsigned char *buf) {
     }
 
     if (((*buf) & 0xE0) != 0x20) {
-        return -2;
+        return NULL;
     }
+
+    return buf;
+}
+
+/* MPEG-1 Pack has SCR starting at byte 4 */
+unsigned long mpeg1_packet_get_pts(unsigned char *buf) {
+    unsigned long pts = 0;
+
+    buf = mpeg1_pack_find_pts(buf);
+    if (!buf)
+        return -1;
 
     pts = ((unsigned long long)(buf[0] & 0x0E)) << 29;
     pts |= ((unsigned long long)buf[1]) << 22;
@@ -189,15 +198,21 @@ unsigned long mpeg1_packet_get_pts(unsigned char *buf) {
     return pts;
 }
 
-void mpeg1_packet_set_pts(unsigned char *buf, unsigned long long scr) {
-    buf[0] = 0x21 | ((scr >> 29) & 0x0E); /* '01', SCR[32..30], marker */
-    buf[1] = (scr >> 22) & 0xFF;
-    buf[2] = 0x01 | ((scr >> 14) & 0xFE); /* SCR[21..15], marker */
-    buf[3] = (scr >> 7) & 0xFF;
-    buf[4] = 0x01 | ((scr << 1) & 0xFE); /* SCR[6..0], marker */
+void mpeg1_packet_set_pts(unsigned char *buf, unsigned long long pts) {
+    buf = mpeg1_pack_find_pts(buf);
+    if (!buf)
+        return;
+
+    buf[0] = 0x21 | ((pts >> 29) & 0x0E); /* '01', SCR[32..30], marker */
+    buf[1] = (pts >> 22) & 0xFF;
+    buf[2] = 0x01 | ((pts >> 14) & 0xFE); /* SCR[21..15], marker */
+    buf[3] = (pts >> 7) & 0xFF;
+    buf[4] = 0x01 | ((pts << 1) & 0xFE); /* SCR[6..0], marker */
 }
 
 static unsigned short last_int_fma_status = 0;
+
+unsigned long pts_table[20];
 
 void runProgram() {
     unsigned long atten;
@@ -210,7 +225,15 @@ void runProgram() {
     int packs_transfered = 0;
 
     dma_addr = stereo_sine_mpg;
+
+    /* store the real PTS values to be able to modify it for DMA transfer */
     for (i = 0; i < 12; i++) {
+        pts_table[i] = mpeg1_packet_get_pts(dma_addr);
+
+        if (i > 0) {
+            pack_set_scr(dma_addr, 0);
+            mpeg1_packet_set_pts(dma_addr, 0);
+        }
         printf("pack %d\n", pack_get_scr(dma_addr));
         printf("pts %d\n", mpeg1_packet_get_pts(dma_addr));
         dma_addr += 2304;
@@ -266,13 +289,13 @@ void runProgram() {
         upd_isr_dclk = 0;
 
         fma_irq_occured = 0;
+        packs_transfered = 0;
 
         next_dma_addr = stereo_sine_mpg;
         dma_wordcnt = 1152; /* always in packs of 2304 */
         playback_start_scr = FMA_DCLK;
-        next_play_dclk = (mpeg1_packet_get_pts(next_dma_addr) - 39600) / 2 +
-                         playback_start_scr;
-
+        next_play_dclk =
+            (pts_table[packs_transfered] - 39600) / 2 + playback_start_scr;
         vblank_cnt = 0;
         while (!exit_app) {
             if (fma_irq_occured) {
@@ -284,15 +307,15 @@ void runProgram() {
 
                     dma_addr = next_dma_addr;
                     next_dma_addr += 2304;
-                    next_play_dclk =
-                        (mpeg1_packet_get_pts(next_dma_addr) - 39600) / 2 +
-                        playback_start_scr;
                     packs_transfered++;
+
+                    next_play_dclk = (pts_table[packs_transfered] - 39600) / 2 +
+                                     playback_start_scr;
                     do_fma_dma = 1;
                 }
 #endif
 
-                if (regdump_index == 0) {
+                if (dma_transfer_dclk == 0) {
                     dma_transfer_dclk = int_fma_dclk;
                 }
                 if (int_fma_status & 0x4) {
@@ -329,7 +352,7 @@ void runProgram() {
         while (!fma_irq_occured)
             ;
 
-        FMA_R04 = 0x1f;
+        FMA_R04 = 0x1f; /* what even is this */
         fma_irq_occured = 0;
         while (!fma_irq_occured)
             ;
