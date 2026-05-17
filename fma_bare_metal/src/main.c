@@ -269,9 +269,9 @@ void runProgram() {
 
         next_dma_addr = stereo_sine_mpg;
         dma_wordcnt = 1152; /* always in packs of 2304 */
-        playback_start_scr = FMA_DCLK - 20000;
-        next_play_dclk =
-            mpeg1_packet_get_pts(next_dma_addr) / 2 + playback_start_scr;
+        playback_start_scr = FMA_DCLK;
+        next_play_dclk = (mpeg1_packet_get_pts(next_dma_addr) - 39600) / 2 +
+                         playback_start_scr;
 
         vblank_cnt = 0;
         while (!exit_app) {
@@ -284,8 +284,9 @@ void runProgram() {
 
                     dma_addr = next_dma_addr;
                     next_dma_addr += 2304;
-                    next_play_dclk = mpeg1_packet_get_pts(next_dma_addr) / 2 +
-                                     playback_start_scr;
+                    next_play_dclk =
+                        (mpeg1_packet_get_pts(next_dma_addr) - 39600) / 2 +
+                        playback_start_scr;
                     packs_transfered++;
                     do_fma_dma = 1;
                 }
@@ -295,11 +296,13 @@ void runProgram() {
                     dma_transfer_dclk = int_fma_dclk;
                 }
                 if (int_fma_status & 0x4) {
-                    upd_isr_dclk = int_fma_dclk;
+                    if (!upd_isr_dclk)
+                        upd_isr_dclk = int_fma_dclk;
                 }
 
                 if (int_fma_status & 0x8) {
                     printf("UNF\n");
+                    break;
                 }
                 if (int_fma_status & 0x20) {
                     printf("ERR\n");
@@ -315,11 +318,26 @@ void runProgram() {
             }
         }
 
-        FMA_CMD = 0x0001; /* stop decoder */
-
         printf("%ld\n", dma_transfer_dclk);
         printf("%ld\n", upd_isr_dclk);
         printf("%ld\n", (upd_isr_dclk - dma_transfer_dclk));
+
+        fma_irq_occured = 0;
+        while (!fma_irq_occured)
+            ;
+        fma_irq_occured = 0;
+        while (!fma_irq_occured)
+            ;
+
+        FMA_R04 = 0x1f;
+        fma_irq_occured = 0;
+        while (!fma_irq_occured)
+            ;
+        fma_irq_occured = 0;
+        while (!fma_irq_occured)
+            ;
+
+        FMA_CMD = 0x0001; /* stop decoder */
 
         FMA_STRM = 0;
         FMA_R04 = 7;      /* without this, playback is not possible*/

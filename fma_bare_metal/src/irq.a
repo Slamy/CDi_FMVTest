@@ -49,6 +49,10 @@ wait_dma_ready:
     btst.b #3,$80004040
 	bne wait_dma_ready
 
+	move sr,-(sp) ; disable interrupts
+	move #$2700,sr
+	
+	move.b #$FF,$80004040 ; reset status
 	move.l dma_addr(a6),a0
 	move.l a0,$8000404c ;MAC
 	move.w dma_wordcnt(a6),$8000404a ; Memory transfer count
@@ -62,6 +66,8 @@ wait_dma_ready:
 wait_dma_ready2:
     btst.b #7,$80004040
 	beq wait_dma_ready2
+
+	move (sp)+,sr  ; enable interrupts
 
 	move.l (sp)+,a0
 	move.l (sp)+,d0
