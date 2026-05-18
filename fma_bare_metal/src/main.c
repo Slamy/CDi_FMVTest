@@ -87,13 +87,32 @@ void take_system() {
     *((unsigned long *)0x1EC) = FMA_IRQ; /* vector delivered by CDIC */
 }
 
+/* clang-format off */
+static char regsize[]={
+	32,16,8,
+};
+/* clang-format on */
+
 void print_registers() {
     int i, j;
 
     for (i = 0; i < regdump_index; i++) {
         printf("%3d ", i);
         for (j = 0; j <= 2; j++) {
-            printf(" %08x", regdump[i][j]);
+            switch (regsize[j]) {
+            case 0:
+                printf(" %x", regdump[i][j]);
+                break;
+            case 8:
+                printf(" %02x", regdump[i][j]);
+                break;
+            case 16:
+                printf(" %04x", regdump[i][j]);
+                break;
+            case 32:
+                printf(" %08x", regdump[i][j]);
+                break;
+            }
         }
 
         /* clang-format off */
@@ -213,12 +232,11 @@ void mpeg1_packet_set_pts(unsigned char *buf, unsigned long long pts) {
 static unsigned short last_int_fma_status = 0;
 
 unsigned long pts_table[20];
+unsigned int times[3];
+unsigned int states[3];
 
 void runProgram() {
-    unsigned long atten;
     unsigned long i;
-    unsigned int times[3];
-    unsigned int states[3];
     unsigned long dma_transfer_dclk = 0;
     unsigned long upd_isr_dclk = 0;
     int magic_set = 0;
@@ -232,7 +250,7 @@ void runProgram() {
 
         if (i > 0) {
             pack_set_scr(dma_addr, 0);
-            mpeg1_packet_set_pts(dma_addr, 0);
+            mpeg1_packet_set_pts(dma_addr, 39600);
         }
         printf("pack %d\n", pack_get_scr(dma_addr));
         printf("pts %d\n", mpeg1_packet_get_pts(dma_addr));
@@ -241,10 +259,7 @@ void runProgram() {
 
     /*                      1001101010110000    9ab0 */
     /* 10000100000000000000110011010101100001   0x21, 0x00, 0x03, 0x35, 0x61 */
-    dc_ssig(videoPath, SIG_BLANK, 0);
-
     playMpeg(0x00800080); /* Normal L2L and R2R */
-
     take_system();
 
     /* Faking MA_Play */
@@ -253,37 +268,12 @@ void runProgram() {
     FMA_IER = 0x013d; /* ignore CSU, bit 7 and bit 6 */
     FMA_CMD = 0x0002; /* start decoder */
 
-    fma_irq_occured = 0;
-    while (!fma_irq_occured && !exit_app)
-        ;
-    times[0] = int_fma_dclk;
-    states[0] = int_fma_status;
-
-    fma_irq_occured = 0;
-    while (!fma_irq_occured && !exit_app)
-        ;
-    times[1] = int_fma_dclk;
-    states[1] = int_fma_status;
-
-    fma_irq_occured = 0;
-    while (!fma_irq_occured && !exit_app)
-        ;
-    times[2] = int_fma_dclk;
-    states[2] = int_fma_status;
-
-    printf("%x %x %d %d\n", states[0], states[1], times[1] - times[0],
-           times[2]);
-
-    for (i = 0; i < 2; i++) {
+    for (i = 0; i < 1; i++) {
         unsigned long now = FMA_DCLK;
         unsigned long playback_start_scr;
         unsigned long next_play_dclk;
         unsigned char *next_dma_addr = 0;
-
-        /*
-        pack_set_scr(stereo_sine_mpg, now * 2);
-        mpeg1_packet_set_pts(stereo_sine_mpg + 33, now * 2 + 40000);
-        */
+        int unf_occured_cnt = 0;
 
         dma_transfer_dclk = 0;
         upd_isr_dclk = 0;
@@ -295,13 +285,13 @@ void runProgram() {
         dma_wordcnt = 1152; /* always in packs of 2304 */
         playback_start_scr = FMA_DCLK;
         next_play_dclk =
-            (pts_table[packs_transfered] - 39600) / 2 + playback_start_scr;
+            (pts_table[packs_transfered] - 20000) / 2 + playback_start_scr;
         vblank_cnt = 0;
+
         while (!exit_app) {
             if (fma_irq_occured) {
                 fma_irq_occured = 0;
 
-#if 1
                 if (!do_fma_dma && int_fma_dclk >= next_play_dclk &&
                     packs_transfered < 12) {
 
@@ -309,11 +299,10 @@ void runProgram() {
                     next_dma_addr += 2304;
                     packs_transfered++;
 
-                    next_play_dclk = (pts_table[packs_transfered] - 39600) / 2 +
+                    next_play_dclk = (pts_table[packs_transfered] + 20000) / 2 +
                                      playback_start_scr;
                     do_fma_dma = 1;
                 }
-#endif
 
                 if (dma_transfer_dclk == 0) {
                     dma_transfer_dclk = int_fma_dclk;
@@ -323,52 +312,40 @@ void runProgram() {
                         upd_isr_dclk = int_fma_dclk;
                 }
 
-                if (int_fma_status & 0x8) {
-                    printf("UNF\n");
-                    break;
+                if (regdump_index < REGDUMP_SIZE) {
+                    regdump[regdump_index][0] =
+                        int_fma_dclk - playback_start_scr;
+                    regdump[regdump_index][1] = int_fma_status;
+                    regdump[regdump_index][2] = packs_transfered;
+
+                    regdump_index++;
+                }
+
+                if ((int_fma_status & 0x8) && packs_transfered == 12) {
+                    /* printf("UNF\n"); */
+                    unf_occured_cnt = 1;
                 }
                 if (int_fma_status & 0x20) {
                     printf("ERR\n");
+                    exit(1);
                 }
-                if (regdump_index < REGDUMP_SIZE) {
-                    regdump[regdump_index][0] = int_fma_dclk;
-                    regdump[regdump_index][1] = int_fma_status;
-                    regdump[regdump_index][2] = upd_isr_dclk;
-                    regdump_index++;
+
+                if (unf_occured_cnt) {
+                    unf_occured_cnt++;
+                    if (unf_occured_cnt == 5)
+                        break;
                 }
-                /*
-                ASSERT(!fma_irq_occured);*/
+
+                /* ASSERT(!fma_irq_occured); */
             }
         }
-
+        /*
         printf("%ld\n", dma_transfer_dclk);
         printf("%ld\n", upd_isr_dclk);
-        printf("%ld\n", (upd_isr_dclk - dma_transfer_dclk));
-
-        fma_irq_occured = 0;
-        while (!fma_irq_occured)
-            ;
-        fma_irq_occured = 0;
-        while (!fma_irq_occured)
-            ;
-
-        FMA_R04 = 0x1f; /* what even is this */
-        fma_irq_occured = 0;
-        while (!fma_irq_occured)
-            ;
-        fma_irq_occured = 0;
-        while (!fma_irq_occured)
-            ;
-
-        FMA_CMD = 0x0001; /* stop decoder */
-
-        FMA_STRM = 0;
-        FMA_R04 = 7;      /* without this, playback is not possible*/
-        FMA_IER = 0x013d; /* ignore CSU, bit 7 and bit 6 */
-        FMA_CMD = 0x0002; /* start decoder */
+        printf("%ld\n", (upd_isr_dclk - dma_transfer_dclk));*/
     }
 
-    /* print_registers(); */
+    print_registers();
     while (!exit_app)
         ;
 }
