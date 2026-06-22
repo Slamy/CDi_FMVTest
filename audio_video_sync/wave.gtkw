@@ -1,15 +1,15 @@
 [*]
-[*] GTKWave Analyzer v3.3.126 (w)1999-2026 BSI
-[*] Sat May  9 21:27:20 2026
+[*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
+[*] Mon Jun 22 18:13:12 2026
 [*]
 [dumpfile] "/home/andre/GIT/Nobelia/audio_video_sync/out.vcd"
-[dumpfile_mtime] "Sat May  9 20:40:16 2026"
-[dumpfile_size] 115245
+[dumpfile_mtime] "Mon Jun 22 18:11:10 2026"
+[dumpfile_size] 52524
 [savefile] "/home/andre/GIT/Nobelia/audio_video_sync/wave.gtkw"
-[timestart] 1450000
+[timestart] 502600
 [size] 1920 1152
-[pos] -1 42
-*-18.787186 3012000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-17.447130 1296800 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 209
 [signals_width] 340
 [sst_expanded] 1
@@ -18,48 +18,45 @@
 -mister
 @22
 log_mister.FMA_Sig[15:0]
-log_mister.FMA_addr[31:0]
-log_mister.FMA_irqen[15:0]
-log_mister.FMA_irqs[15:0]
+log_mister.FMV_IMGSZ[31:0]
 log_mister.FMV_IMGTIMECD[31:0]
+log_mister.FMV_PICSZ[31:0]
 log_mister.FMV_PICS_IN_FIFO[7:0]
 log_mister.FMV_PICTIMECD[31:0]
 log_mister.FMV_Sig[15:0]
 log_mister.FMV_TMPREF[15:0]
 log_mister.GEN_VDI_CMD[15:0]
 log_mister.PIC_RATE[15:0]
-@25
 log_mister.V_BufStat[7:0]
-@22
 log_mister.V_DTSVal[15:0]
 log_mister.V_LastSCR[31:0]
 log_mister.V_PausedSCR[31:0]
 log_mister.V_SCR[31:0]
+@23
 log_mister.V_Stat[15:0]
+@22
 log_mister.V_Status[15:0]
 log_mister.dts[31:0]
-log_mister.fma_cmd[15:0]
 log_mister.fullpcl[7:0]
+log_mister.md_imgsz[31:0]
 log_mister.md_picrt[7:0]
+log_mister.md_timecd[31:0]
 log_mister.md_tmpref[15:0]
 log_mister.piccnt[15:0]
 @200
 -vmpeg
 @22
 log_vmpeg.FMA_Sig[15:0]
-log_vmpeg.FMA_addr[31:0]
-log_vmpeg.FMA_irqen[15:0]
-log_vmpeg.FMA_irqs[15:0]
+log_vmpeg.FMV_IMGSZ[31:0]
 log_vmpeg.FMV_IMGTIMECD[31:0]
+log_vmpeg.FMV_PICSZ[31:0]
 log_vmpeg.FMV_PICS_IN_FIFO[7:0]
 log_vmpeg.FMV_PICTIMECD[31:0]
 log_vmpeg.FMV_Sig[15:0]
 log_vmpeg.FMV_TMPREF[15:0]
 log_vmpeg.GEN_VDI_CMD[15:0]
 log_vmpeg.PIC_RATE[15:0]
-@24
 log_vmpeg.V_BufStat[7:0]
-@22
 log_vmpeg.V_DTSVal[15:0]
 log_vmpeg.V_LastSCR[31:0]
 log_vmpeg.V_PausedSCR[31:0]
@@ -67,9 +64,10 @@ log_vmpeg.V_SCR[31:0]
 log_vmpeg.V_Stat[15:0]
 log_vmpeg.V_Status[15:0]
 log_vmpeg.dts[31:0]
-log_vmpeg.fma_cmd[15:0]
 log_vmpeg.fullpcl[7:0]
+log_vmpeg.md_imgsz[31:0]
 log_vmpeg.md_picrt[7:0]
+log_vmpeg.md_timecd[31:0]
 log_vmpeg.md_tmpref[15:0]
 log_vmpeg.piccnt[15:0]
 [pattern_trace] 1
