@@ -272,9 +272,16 @@ void playMpeg() {
 
     /* Assume we are not running from serial stub first */
     mpegFile = open("/cd/VIDEO01.RTF", _READ);
+    if (mpegFile < 0) {
+        /* We are running via serial stub on real hardware and Top Gun Disc? */
+        printf("Serial stub?\n");
+        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
+        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
+        mpegFile = open("/cd/seq2.rtf", _READ); /* Addams Family Disc 2 */
+    }
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0, 0));
+    DEBUG(lseek(mpegFile, 0x8d65800, 0)); /* Mamushka! */
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
@@ -400,6 +407,8 @@ static int cd_is_paused = 0;
 int mpegSignal(sigCode)
 int sigCode;
 {
+    int time[3];
+
     static int finished_playback_blank_cnt = 0;
     static int restart_playback_blank_cnt = 0;
     MotionStatus mvstat;
@@ -554,8 +563,7 @@ int sigCode;
                 time[1] = FMA_DCLK;
                 DEBUG(ss_cont(mpegFile));
                 time[2] = FMA_DCLK;
-                printf("Cont on %d %d %d\n", full_cnt, time[1] - time[0],
-                       time[2] - time[1]);
+                printf("Cont took %d %d\n", time[1] - time[0], time[2] - time[1]);
             }
         }
 #endif
@@ -570,8 +578,15 @@ void poll_state() {
     int i;
 
     if (do_pause) {
+        int time[3];
+
+        time[0] = FMA_DCLK;
         DEBUG(mv_pause(mvPath));
+        time[1] = FMA_DCLK;
         DEBUG(ss_pause(mpegFile));
+        time[2] = FMA_DCLK;
+        printf("Pause took %d %d\n", time[1] - time[0], time[2] - time[1]);
+
         do_pause = 0;
     }
 
@@ -608,6 +623,7 @@ void poll_state() {
         recording_not_yet_started)
         return;
 
+#if 0
     if (fdrvs1_static && fmadrv_static) {
         unsigned long FMA_addr =
             *(unsigned long *)(((char *)fmadrv_static) + 0x122);
@@ -740,4 +756,5 @@ void poll_state() {
             }
         }
     }
+#endif
 }

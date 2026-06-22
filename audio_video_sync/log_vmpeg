@@ -5,58 +5,36 @@ fdrvs1_static: dfa930
 dma_adr 80004040
 fma_dclk_adr e03010
 Found fmadriv at dfbf70
+Serial stub?
 Started Play 6
-NIS 3000200
-Cont on 0 35 8247
-Cont on 1 35 8870
-Cont on 0 41 8117
-Cont on 0 36 9644
-Cont on 1 34 8911
-Cont on 0 34 15367
-Cont on 0 35 9240
-Cont on 1 34 8431
-Cont on 0 35 9573
-Cont on 0 35 8838
-Cont on 0 35 8109
-Cont on 1 35 10080
-Cont on 0 35 9337
-Cont on 1 34 9503
-Cont on 1 35 9216
-Cont on 0 36 10277
-Cont on 1 34 8639
-Cont on 1 34 9714
-Cont on 0 35 9440
-Cont on 1 34 10045
-Cont on 2 34 10676
-Cont on 0 42 10821
-Cont on 1 34 9194
-Cont on 1 34 10704
-Cont on 0 36 10876
-Cont on 1 34 8340
-Cont on 0 35 8066
-Cont on 0 35 9122
-Cont on 1 34 10187
-Cont on 0 35 8558
-Cont on 0 35 9631
-Cont on 1 35 9337
-Cont on 0 35 9053
-Cont on 0 35 8320
-Cont on 1 35 9831
-Cont on 1 35 10003
-Cont on 0 35 10169
-Cont on 0 34 9444
-Cont on 1 34 10505
-Cont on 0 35 9783
-Cont on 1 61 11259
-Cont on 0 35 9652
-Cont on 0 35 10262
-Cont on 0 35 10436
-Cont on 1 34 9251
-Cont on 1 35 9875
-Cont on 0 35 11387
-Cont on 1 35 11099
-Cont on 0 42 11262
-Cont on 0 35 10095
-Cont on 0 35 10252
-Cont on 0 35 9518
-PCB 1e5 1c00 10
+NIS 30001e0
+Pause took 587 823
+Cont took 37 8278
+Pause took 817 984
+Cont took 37 8927
+Pause took 469 1170
+Cont took 36 9583
+Pause took 913 1151
+Cont took 36 9334
+Pause took 1042 1226
+Cont took 36 9084
+Pause took 1150 1321
+Cont took 36 9734
+Pause took 948 1283
+Cont took 64 9008
+Pause took 541 956
+Cont took 36 9243
+Pause took 579 895
+Cont took 37 8993
+Pause took 585 819
+Cont took 36 8736
+Pause took 602 1150
+Cont took 37 9380
+Pause took 1002 1328
+Cont took 37 10036
+Pause took 364 944
+Cont took 36 9337
+Pause took 502 1181
+Cont took 37 9535
+SIGINT!
+
