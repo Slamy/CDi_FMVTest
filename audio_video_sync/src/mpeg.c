@@ -19,7 +19,7 @@
 /* #define HOSTPLAY */
 #define DO_PAUSE
 /* #define DO_SLOWMO */
-#define PRINT_REGISTERS
+/* #define PRINT_REGISTERS */
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -738,7 +738,7 @@ void record_state() {
             regdump[regdump_index][7] = md_imgsz;
             regdump[regdump_index][8] = md_timecd;
             regdump[regdump_index][9] = md_tmpref;
-            regdump[regdump_index][10] = last_software_state;
+            regdump[regdump_index][10] = software_state;
             regdump[regdump_index][11] = tmpref;
             regdump[regdump_index][12] = pictimecd;
             regdump[regdump_index][13] = imgtimecd;
