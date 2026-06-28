@@ -14,12 +14,12 @@
 #include "graphics.h"
 
 /* Have at least one of them enabled! */
-#define ENABLE_AUDIO
+/* #define ENABLE_AUDIO */
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
 #define DO_PAUSE
 /* #define DO_SLOWMO */
-/* #define PRINT_REGISTERS */
+#define PRINT_REGISTERS
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -37,6 +37,7 @@ int mpegStatus;
 int maPath, mvPath, maMapId, mvMapId;
 
 static int mpegFile = -1;
+static int finished_playback_blank_cnt = 0;
 
 static PCB mpegPcb;
 static PCL mvPcl[MV_PCL_COUNT];
@@ -265,8 +266,10 @@ void playMpeg() {
 #else
     /* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
-    DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl,
-                    &mvStatus, -2, 0));
+    DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_SINGLE_STEP, MV_NO_OFFSET, mvPcl,
+                    &mvStatus, MV_NO_SYNC, 0));
+    DEBUG(mv_cdnext(mvPath, 0, NULL, 0));
+
 #endif
 #ifdef ENABLE_AUDIO
     DEBUG(
@@ -288,6 +291,8 @@ void playMpeg() {
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
+
+    finished_playback_blank_cnt = 80;
 }
 
 void stopMpeg() {
@@ -414,7 +419,6 @@ int sigCode;
 {
     int time[3];
 
-    static int finished_playback_blank_cnt = 0;
     MotionStatus mvstat;
     MA_status mastat;
 
@@ -469,14 +473,7 @@ int sigCode;
             }
 
             DEBUG(mv_status(mvPath, &mvstat));
-            DEBUG(ma_status(maPath, &mastat));
 
-            /*
-            if ((piccnt & 7) == 1) {
-                printf("PIC %x %d %d %x\n", sigCode, full_mv_cnt, full_ma_cnt,
-                       FMV_SCR);
-            }
-            */
 #endif
 
             if (mpegStatus == MPP_INIT)
@@ -553,82 +550,9 @@ void poll_state() {
     int full_cnt = 0;
     int i;
 
-    if (do_pause) {
-        int time[3];
-
-        time[0] = FMA_DCLK;
-        software_state = 1;
-        DEBUG(mv_pause(mvPath));
-        time[1] = FMA_DCLK;
-        software_state = 2;
-        DEBUG(ss_pause(mpegFile));
-        software_state = 3;
-        time[2] = FMA_DCLK;
-        printf("Pause took %d %d\n", time[1] - time[0], time[2] - time[1]);
-
-        do_pause = 0;
-    }
-
-    if (restart_playback_blank_cnt == 1) {
-        int time[3];
-        int full_cnt = 0;
-        int i;
-
-        restart_playback_blank_cnt = 0;
-
-        for (i = 0; i < MA_PCL_COUNT; i++) {
-            if (maPcl[i].PCL_Ctrl & 0x01) {
-                full_cnt++;
-            }
-        }
-
-        /* Real hardware
-        Cont on 1 8404 35
-        Cont on 0 8566 35
-        Cont on 1 6939 34
-
-        MiSTer
-        Cont on 1 28 49
-        Cont on 0 26 94
-        Cont on 0 26 94
-
-        cdiemu
-        */
-        time[0] = FMA_DCLK;
-        software_state = 4;
-        DEBUG(mv_continue(mvPath, 0));
-        time[1] = FMA_DCLK;
-        software_state = 5;
-        DEBUG(ss_cont(mpegFile));
-        software_state = 6;
-        time[2] = FMA_DCLK;
-        printf("Cont took %d %d\n", time[1] - time[0], time[2] - time[1]);
-    }
-
     sigmask(1);
     record_state();
     sigmask(-1);
-
-#ifdef DO_SLOWMO
-    for (i = 0; i < MV_PCL_COUNT; i++) {
-        if (mvPcl[i].PCL_Ctrl & 0x01) {
-            full_cnt++;
-        }
-    }
-
-    if (full_cnt >= 100 && !cd_is_paused) {
-        print_registers();
-        printf("pause!\n");
-        DEBUG(ss_pause(mpegFile));
-        cd_is_paused = 1;
-    }
-
-    if (full_cnt <= 50 && cd_is_paused) {
-        printf("cont!\n");
-        DEBUG(ss_cont(mpegFile));
-        cd_is_paused = 0;
-    }
-#endif
 }
 
 void record_state() {
@@ -708,7 +632,8 @@ void record_state() {
             (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
             (fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos) ||
             (last_md_imgsz != md_imgsz) || (last_md_timecd != md_timecd) ||
-            (last_md_tmpref != md_tmpref) || (last_software_state != software_state) ||
+            (last_md_tmpref != md_tmpref) ||
+            (last_software_state != software_state) ||
             (last_tmpref != tmpref) || (last_pictimecd != pictimecd) ||
             (last_imgtimecd != imgtimecd) || (last_vblankcnt != vblankcnt) ||
             (last_V_PausedSCR != V_PausedSCR) || (last_V_SCR != V_SCR) ||
