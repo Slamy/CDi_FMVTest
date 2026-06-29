@@ -353,10 +353,10 @@ static int recording_stopped = 0;
 /* clang-format off */
 static char regsize[]={
 	32,8,8,16,16,
-	32,16,16,16,0,
-	0,0,0,0,16,
+	32,32,32,32,16,
+	8,16,32,32,16,
 	16,32,32,32,16,
-	16,8,0,16,
+	16,8,16,16,
 
 	/* Timestamp */
 	32
@@ -596,6 +596,7 @@ void record_state() {
         unsigned long md_imgsz = mvDesc->MD_ImgSz;
         unsigned long md_timecd = mvDesc->MD_TimeCd;
         unsigned short md_tmpref = mvDesc->MD_TmpRef;
+        unsigned char md_picrt = mvDesc->MD_PicRt;
         unsigned short tmpref = FMV_TMPREF;
         unsigned long pictimecd = FMV_PICTIMECD;
         unsigned long imgtimecd = FMV_IMGTIMECD;
@@ -615,7 +616,7 @@ void record_state() {
         static unsigned long last_md_imgsz;
         static unsigned long last_md_timecd;
         static unsigned short last_md_tmpref;
-        static unsigned char last_software_state;
+        static unsigned char last_md_picrt;
         static unsigned short last_tmpref;
         static unsigned long last_pictimecd;
         static unsigned long last_imgtimecd;
@@ -632,10 +633,9 @@ void record_state() {
             (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
             (fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos) ||
             (last_md_imgsz != md_imgsz) || (last_md_timecd != md_timecd) ||
-            (last_md_tmpref != md_tmpref) ||
-            (last_software_state != software_state) ||
+            (last_md_tmpref != md_tmpref) || (last_md_picrt != md_picrt) ||
             (last_tmpref != tmpref) || (last_pictimecd != pictimecd) ||
-            (last_imgtimecd != imgtimecd) || (last_vblankcnt != vblankcnt) ||
+            (last_imgtimecd != imgtimecd) ||
             (last_V_PausedSCR != V_PausedSCR) || (last_V_SCR != V_SCR) ||
             (last_V_LastSCR != V_LastSCR) || (last_V_DTSVal != V_DTSVal) ||
             (reset_after_event && dclkdiff > 850)) {
@@ -663,7 +663,7 @@ void record_state() {
             regdump[regdump_index][7] = md_imgsz;
             regdump[regdump_index][8] = md_timecd;
             regdump[regdump_index][9] = md_tmpref;
-            regdump[regdump_index][10] = software_state;
+            regdump[regdump_index][10] = md_picrt;
             regdump[regdump_index][11] = tmpref;
             regdump[regdump_index][12] = pictimecd;
             regdump[regdump_index][13] = imgtimecd;
@@ -677,7 +677,7 @@ void record_state() {
             regdump[regdump_index][21] =
                 full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
             regdump[regdump_index][22] = vdi_cmd;
-            regdump[regdump_index][23] = vblankcnt;
+            regdump[regdump_index][23] = picrate;
 
             regdump[regdump_index][24] = dclkdiff;
 
@@ -701,11 +701,10 @@ void record_state() {
             last_md_imgsz = md_imgsz;
             last_md_timecd = md_timecd;
             last_md_tmpref = md_tmpref;
-            last_software_state = software_state;
+            last_md_picrt = md_picrt;
             last_tmpref = tmpref;
             last_pictimecd = pictimecd;
             last_imgtimecd = imgtimecd;
-            last_vblankcnt = vblankcnt;
 
             reset_after_event = 0;
 
