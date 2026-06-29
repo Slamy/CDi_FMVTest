@@ -28,6 +28,8 @@ signals=[("dts", 32),
          ("fullpcl", 8),
          ("GEN_VDI_CMD", 16),
          ("PIC_RATE", 16),
+         ("FMV_IMGRT", 16),
+         ("FMV_PICRT", 16),
          ]
 
 

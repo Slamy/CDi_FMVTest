@@ -60,7 +60,7 @@
 #define FMV_DECWIN (*((unsigned long *)0x0E04078))
 
 #define FMV_PICSZ (*((unsigned long *)0x0E04052))
-#define FMV_PICRT (*((unsigned short *)0x0E04056)
+#define FMV_PICRT (*((unsigned short *)0x0E04056))
 #define FMV_TIMECD (*((unsigned long *)0x0E04058))
 #define FMV_TMPREF (*((unsigned short *)0x0E0405C))
 
