@@ -17,9 +17,9 @@
 /* #define ENABLE_AUDIO */
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
-#define DO_PAUSE
+/* #define DO_PAUSE */
 /* #define DO_SLOWMO */
-#define PRINT_REGISTERS
+/* #define PRINT_REGISTERS */
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -266,9 +266,8 @@ void playMpeg() {
 #else
     /* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
-    DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_SINGLE_STEP, MV_NO_OFFSET, mvPcl,
+    DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl,
                     &mvStatus, MV_NO_SYNC, 0));
-    DEBUG(mv_cdnext(mvPath, 0, NULL, 0));
 
 #endif
 #ifdef ENABLE_AUDIO
@@ -278,13 +277,6 @@ void playMpeg() {
 
     /* Assume we are not running from serial stub first */
     mpegFile = open("/cd/VIDEO01.RTF", _READ);
-    if (mpegFile < 0) {
-        /* We are running via serial stub on real hardware and Top Gun Disc? */
-        printf("Serial stub?\n");
-        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
-        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
-        mpegFile = open("/cd/STILLS/t01", _READ); /* Addams Family Disc 2 */
-    }
     DEBUG(mpegFile >= 0);
 
     DEBUG(lseek(mpegFile, 0, 0));
