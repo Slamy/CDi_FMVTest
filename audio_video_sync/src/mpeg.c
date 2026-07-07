@@ -14,7 +14,7 @@
 #include "graphics.h"
 
 /* Have at least one of them enabled! */
-/* #define ENABLE_AUDIO */
+#define ENABLE_AUDIO
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
 /* #define DO_PAUSE */
@@ -267,8 +267,7 @@ void playMpeg() {
     /* Setup MPEG Playback */
 #ifdef ENABLE_VIDEO
     DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl,
-                    &mvStatus, MV_NO_SYNC, 0));
-
+                    &mvStatus, -2, 0));
 #endif
 #ifdef ENABLE_AUDIO
     DEBUG(
