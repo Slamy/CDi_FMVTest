@@ -276,6 +276,13 @@ void playMpeg() {
 
     /* Assume we are not running from serial stub first */
     mpegFile = open("/cd/VIDEO01.RTF", _READ);
+    if (mpegFile < 0) {
+        /* We are running via serial stub on real hardware and Top Gun Disc? */
+        printf("Serial stub?\n");
+        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
+        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
+        mpegFile = open("/cd/sonde.rtf", _READ); /* Addams Family Disc 2 */
+    }
     DEBUG(mpegFile >= 0);
 
     DEBUG(lseek(mpegFile, 0, 0));

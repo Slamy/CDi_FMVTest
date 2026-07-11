@@ -5,5 +5,6 @@ fdrvs1_static: dfa930
 dma_adr 80004040
 fma_dclk_adr e03010
 Found fmadriv at dfbf70
+Serial stub?
 Started Play 6
-NIS 3000200
+NIS 2e00220
