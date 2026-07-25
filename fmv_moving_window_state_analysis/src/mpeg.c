@@ -296,7 +296,7 @@ static char regsize[]={
 	16,32,32,32,16,
 	16,8,16,16,16,
 	16,8,16,16,32,
-	32,32,
+	32,32,16,
 
 	/* Timestamp */
 	32
@@ -313,7 +313,7 @@ void print_registers() {
 #ifdef PRINT_REGISTERS
     for (i = 0; i < regdump_index; i++) {
         printf("%3d ", i);
-        for (j = 0; j <= 32; j++) {
+        for (j = 0; j < sizeof(regsize); j++) {
             switch (regsize[j]) {
             case 0:
                 printf(" %x", regdump[i][j]);
@@ -533,6 +533,7 @@ void record_state(int softpos) {
         unsigned short imgrt = FMV_IMGRT;
         unsigned short picrt = FMV_PICRT;
         unsigned short vdi_cmd = FMV_VDI_CMD;
+        unsigned short gen_dec_cmd = FMV_GEN_DEC_CMD;
         unsigned long md_imgsz = mvDesc->MD_ImgSz;
         unsigned long md_timecd = mvDesc->MD_TimeCd;
         unsigned short md_tmpref = mvDesc->MD_TmpRef;
@@ -636,8 +637,9 @@ void record_state(int softpos) {
 
             regdump[regdump_index][30] = V_DecOff;
             regdump[regdump_index][31] = V_ScrOff;
-
-            regdump[regdump_index][32] = dclkdiff;
+            regdump[regdump_index][32] = gen_dec_cmd;
+			
+            regdump[regdump_index][33] = dclkdiff;
 
             regdump_index++;
 

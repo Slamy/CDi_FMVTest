@@ -38,6 +38,7 @@ signals=[("dts", 32),
 
          ("V_DecOff", 32),
          ("V_ScrOff", 32),
+         ("GEN_DEC_CMD", 16),
 
          ]
 

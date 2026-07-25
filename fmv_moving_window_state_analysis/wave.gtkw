@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
-[*] Sat Jul 25 15:39:42 2026
+[*] Sat Jul 25 15:58:50 2026
 [*]
 [dumpfile] "/home/andre/GIT/Nobelia/fmv_moving_window_state_analysis/out.vcd"
-[dumpfile_mtime] "Sat Jul 25 15:38:52 2026"
-[dumpfile_size] 24569
+[dumpfile_mtime] "Sat Jul 25 15:55:58 2026"
+[dumpfile_size] 24848
 [savefile] "/home/andre/GIT/Nobelia/fmv_moving_window_state_analysis/wave.gtkw"
 [timestart] 0
 [size] 2560 1348
-[pos] -920 -119
-*-17.133347 278100 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] -1 -1
+*-17.133347 361500 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 209
 [signals_width] 340
 [sst_expanded] 1
@@ -27,6 +27,7 @@ log_mister.FMV_PICS_IN_FIFO[7:0]
 log_mister.FMV_PICTIMECD[31:0]
 log_mister.FMV_Sig[15:0]
 log_mister.FMV_TMPREF[15:0]
+log_mister.GEN_DEC_CMD[15:0]
 log_mister.GEN_VDI_CMD[15:0]
 log_mister.PIC_RATE[15:0]
 log_mister.V_BufStat[7:0]
@@ -51,7 +52,7 @@ log_mister.piccnt[15:0]
 log_mister.softpos[7:0]
 @200
 -vmpeg
-@22
+@23
 log_vmpeg.FMA_Sig[15:0]
 log_vmpeg.FMV_IMGRT[15:0]
 log_vmpeg.FMV_IMGSZ[31:0]
@@ -62,6 +63,7 @@ log_vmpeg.FMV_PICS_IN_FIFO[7:0]
 log_vmpeg.FMV_PICTIMECD[31:0]
 log_vmpeg.FMV_Sig[15:0]
 log_vmpeg.FMV_TMPREF[15:0]
+log_vmpeg.GEN_DEC_CMD[15:0]
 log_vmpeg.GEN_VDI_CMD[15:0]
 log_vmpeg.PIC_RATE[15:0]
 log_vmpeg.V_BufStat[7:0]
@@ -72,9 +74,7 @@ log_vmpeg.V_PausedSCR[31:0]
 log_vmpeg.V_SCR[31:0]
 log_vmpeg.V_ScrOff[31:0]
 log_vmpeg.V_Scroll[15:0]
-@23
 log_vmpeg.V_Stat[15:0]
-@22
 log_vmpeg.V_Status[15:0]
 log_vmpeg.V_UpdFlag[7:0]
 log_vmpeg.V_VCMD[15:0]
