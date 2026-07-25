@@ -1,0 +1,88 @@
+[*]
+[*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
+[*] Sat Jul 25 15:04:46 2026
+[*]
+[dumpfile] "/home/andre/GIT/Nobelia/fmv_moving_window_state_analysis/out.vcd"
+[dumpfile_mtime] "Sat Jul 25 15:04:18 2026"
+[dumpfile_size] 25377
+[savefile] "/home/andre/GIT/Nobelia/fmv_moving_window_state_analysis/wave.gtkw"
+[timestart] 0
+[size] 1920 1152
+[pos] -1 -1
+*-15.344119 35700 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 209
+[signals_width] 340
+[sst_expanded] 1
+[sst_vpaned_height] 349
+@200
+-mister
+@22
+log_mister.FMA_Sig[15:0]
+log_mister.FMV_IMGRT[15:0]
+log_mister.FMV_IMGSZ[31:0]
+log_mister.FMV_IMGTIMECD[31:0]
+log_mister.FMV_PICRT[15:0]
+log_mister.FMV_PICSZ[31:0]
+log_mister.FMV_PICS_IN_FIFO[7:0]
+log_mister.FMV_PICTIMECD[31:0]
+log_mister.FMV_Sig[15:0]
+log_mister.FMV_TMPREF[15:0]
+log_mister.GEN_VDI_CMD[15:0]
+log_mister.PIC_RATE[15:0]
+log_mister.V_BufStat[7:0]
+log_mister.V_DTSVal[15:0]
+log_mister.V_DecOff[31:0]
+log_mister.V_LastSCR[31:0]
+log_mister.V_PausedSCR[31:0]
+log_mister.V_SCR[31:0]
+log_mister.V_ScrOff[31:0]
+log_mister.V_Scroll[15:0]
+log_mister.V_Stat[15:0]
+log_mister.V_Status[15:0]
+log_mister.V_UpdFlag[7:0]
+log_mister.V_VCMD[15:0]
+log_mister.V_Window[31:0]
+log_mister.dts[31:0]
+log_mister.fullpcl[7:0]
+log_mister.md_imgsz[31:0]
+log_mister.md_picrt[7:0]
+log_mister.md_timecd[31:0]
+log_mister.md_tmpref[15:0]
+log_mister.piccnt[15:0]
+@201
+-vmpeg
+@22
+log_vmpeg.FMA_Sig[15:0]
+log_vmpeg.FMV_IMGRT[15:0]
+log_vmpeg.FMV_IMGSZ[31:0]
+log_vmpeg.FMV_IMGTIMECD[31:0]
+log_vmpeg.FMV_PICRT[15:0]
+log_vmpeg.FMV_PICSZ[31:0]
+log_vmpeg.FMV_PICS_IN_FIFO[7:0]
+log_vmpeg.FMV_PICTIMECD[31:0]
+log_vmpeg.FMV_Sig[15:0]
+log_vmpeg.FMV_TMPREF[15:0]
+log_vmpeg.GEN_VDI_CMD[15:0]
+log_vmpeg.PIC_RATE[15:0]
+log_vmpeg.V_BufStat[7:0]
+log_vmpeg.V_DTSVal[15:0]
+log_vmpeg.V_DecOff[31:0]
+log_vmpeg.V_LastSCR[31:0]
+log_vmpeg.V_PausedSCR[31:0]
+log_vmpeg.V_SCR[31:0]
+log_vmpeg.V_ScrOff[31:0]
+log_vmpeg.V_Scroll[15:0]
+log_vmpeg.V_Stat[15:0]
+log_vmpeg.V_Status[15:0]
+log_vmpeg.V_UpdFlag[7:0]
+log_vmpeg.V_VCMD[15:0]
+log_vmpeg.V_Window[31:0]
+log_vmpeg.dts[31:0]
+log_vmpeg.fullpcl[7:0]
+log_vmpeg.md_imgsz[31:0]
+log_vmpeg.md_picrt[7:0]
+log_vmpeg.md_timecd[31:0]
+log_vmpeg.md_tmpref[15:0]
+log_vmpeg.piccnt[15:0]
+[pattern_trace] 1
+[pattern_trace] 0

@@ -15,6 +15,6 @@ For MiSTer and other emulators, perform a manual copy.
 Python can be used to convert the recordings into a VCD file for viewing in GTKWave
 
     python -m venv venv
-    venv/bin/python -m pip install cs2vcd
+    venv/bin/python -m pip install pyvcd
     venv/bin/python tovcd.py
     gtkwave wave.gtkw

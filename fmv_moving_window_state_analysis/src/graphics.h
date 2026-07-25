@@ -6,5 +6,4 @@
 extern int curIcfA, curIcfB;
 extern unsigned char *paVideo1, *paVideo2;
 
-
 #endif

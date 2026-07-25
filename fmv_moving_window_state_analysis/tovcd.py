@@ -49,7 +49,7 @@ def readlog(path, writer):
         for line in f:
             parts = line.split()
             
-            if len(parts) > 8:
+            if len(parts) > 10:
                 rows.append([int(x,16) for x in parts])
 
     # compute cumulative time

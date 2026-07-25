@@ -338,7 +338,7 @@ void mpegPic() {
 
 int sigcnt = 0;
 #define REGDUMP_SIZE 800
-static unsigned long regdump[REGDUMP_SIZE][30];
+static unsigned long regdump[REGDUMP_SIZE][35];
 
 static int regdump_index = 0;
 static int recording_stopped = 0;
@@ -349,8 +349,8 @@ static char regsize[]={
 	8,16,32,32,16,
 	16,32,32,32,16,
 	16,8,16,16,16,
-	16,
-
+	16,8,16,16,32,
+	32,32,
 	/* Timestamp */
 	32
 };

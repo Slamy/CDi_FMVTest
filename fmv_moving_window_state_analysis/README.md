@@ -7,6 +7,16 @@ The internal state is analyzed and printed on the UART. The motivation for this 
 [log_mister](log_mister)
 [log_vmpeg](log_vmpeg)
 
+After playback, the recording is printed over serial port and recorded into `log_vmpeg`.
+For MiSTer and other emulators, perform a manual copy.
+Python can be used to convert the recordings into a VCD file for viewing in GTKWave
+
+    python -m venv venv
+    venv/bin/python -m pip install pyvcd
+    venv/bin/python tovcd.py
+    gtkwave wave.gtkw
+
+
 The base image is this:
 
 ![Picture of a parrot](parrot.png)
