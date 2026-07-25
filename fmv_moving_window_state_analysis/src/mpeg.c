@@ -226,7 +226,6 @@ int channel;
 
     /* Without mv_loop, the decoder will stop and we can't scroll through the
      * picture */
-    DEBUG(mv_loop(mvPath, mvMapId, 0, cross_mpg_len, 10000));
     DEBUG(mv_hostplay(mvPath, mvMapId, MV_SPEED_NORMAL, cross_mpg_len,
                       cross_mpg, 0, &mvStatus, MV_NO_SYNC, 0));
     /* DEBUG(mv_hostnext(mvPath, mvMapId)); */ /* Not sure if this is needed */
