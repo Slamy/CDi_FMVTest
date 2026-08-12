@@ -17,7 +17,7 @@
 /* #define ENABLE_AUDIO */
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
-/* #define DO_PAUSE */
+#define DO_PAUSE
 /* #define DO_SLOWMO */
 /* #define PRINT_REGISTERS */
 
@@ -277,9 +277,16 @@ void playMpeg() {
 
     /* Assume we are not running from serial stub first */
     mpegFile = open("/cd/VIDEO01.RTF", _READ);
+    if (mpegFile < 0) {
+        /* We are running via serial stub on real hardware and Top Gun Disc? */
+        printf("Serial stub?\n");
+        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
+        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
+        mpegFile = open("/cd/seq2.rtf", _READ); /* Addams Family Disc 2 */
+    }
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0, 0));
+    DEBUG(lseek(mpegFile, 0x8d65800, 0)); /* Mamushka! */
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
@@ -529,6 +536,9 @@ int sigCode;
 #ifdef DO_PAUSE
         if (restart_playback_blank_cnt > 1) {
             restart_playback_blank_cnt--;
+if (!restart_playback_blank_cnt) {
+DEBUG(mv_continue(mvPath, 0));
+}
         }
 #endif
         vblankcnt++;
@@ -546,6 +556,33 @@ void poll_state() {
     sigmask(1);
     record_state();
     sigmask(-1);
+
+    if (do_pause) {
+        int time[2];
+
+        time[0] = FMA_DCLK;
+        DEBUG(mv_pause(mvPath));
+        time[1] = FMA_DCLK;
+        printf("Pause took %d %d\n", time[1] - time[0]);
+
+        do_pause = 0;
+    }
+
+
+    if (full_cnt >= 100 && !cd_is_paused) {
+        print_registers();
+        printf("pause!\n");
+        DEBUG(ss_pause(mpegFile));
+        cd_is_paused = 1;
+    }
+
+    if (full_cnt <= 50 && cd_is_paused) {
+        printf("cont!\n");
+        DEBUG(ss_cont(mpegFile));
+        cd_is_paused = 0;
+    }
+
+
 }
 
 void record_state() {
