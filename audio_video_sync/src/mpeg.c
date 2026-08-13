@@ -264,29 +264,20 @@ void playMpeg() {
     printf("Started Play\n");
 
 #else
-    /* Setup MPEG Playback */
+/* Setup MPEG Playback */
+#ifdef ENABLE_AUDIO
+    DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, -1, 0));
+#endif
 #ifdef ENABLE_VIDEO
     DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl,
-                    &mvStatus, MV_NO_SYNC, 0));
-
-#endif
-#ifdef ENABLE_AUDIO
-    DEBUG(
-        ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, mvPath, 0));
+                    &mvStatus, -1, 0));
 #endif
 
     /* Assume we are not running from serial stub first */
     mpegFile = open("/cd/VIDEO01.RTF", _READ);
-    if (mpegFile < 0) {
-        /* We are running via serial stub on real hardware and Top Gun Disc? */
-        printf("Serial stub?\n");
-        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
-        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
-        mpegFile = open("/cd/seq2.rtf", _READ); /* Addams Family Disc 2 */
-    }
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0x8d65800, 0)); /* Mamushka! */
+    DEBUG(lseek(mpegFile, 0, 0));
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
@@ -344,8 +335,8 @@ void mpegPic() {
 }
 
 int sigcnt = 0;
-#define REGDUMP_SIZE 800
-static unsigned long regdump[REGDUMP_SIZE][30];
+#define REGDUMP_SIZE 1000
+static unsigned long regdump[REGDUMP_SIZE][28];
 
 static int regdump_index = 0;
 static int recording_stopped = 0;
@@ -480,9 +471,8 @@ int sigCode;
 
             piccnt++;
 #ifdef DO_PAUSE
-            if ((piccnt == 8) {
+            if (piccnt == 40) {
                 do_pause = 1;
-                restart_playback_blank_cnt = 20;
             }
 #endif
 
@@ -521,7 +511,7 @@ int sigCode;
 #endif
 
 #ifndef HOSTPLAY
-            if (piccnt == 60) {
+            if (piccnt == 120) {
                 print_registers();
             }
 #endif
@@ -529,8 +519,6 @@ int sigCode;
     } else if (sigCode == SIG_BLANK) {
         if (finished_playback_blank_cnt) {
             finished_playback_blank_cnt--;
-            if (!finished_playback_blank_cnt)
-                print_registers();
         }
 #ifdef DO_PAUSE
         if (restart_playback_blank_cnt) {
@@ -563,18 +551,25 @@ void poll_state() {
         DEBUG(mv_pause(mvPath));
         time[1] = FMA_DCLK;
         printf("Pause took %d\n", time[1] - time[0]);
+        restart_playback_blank_cnt = 20;
 
         do_pause = 0;
     }
 
-    if (full_cnt >= 100 && !cd_is_paused) {
+    for (i = 0; i < MV_PCL_COUNT; i++) {
+        if (mvPcl[i].PCL_Ctrl & 0x01) {
+            full_cnt++;
+        }
+    }
+
+    if (full_cnt >= 50 && !cd_is_paused) {
         print_registers();
         printf("pause!\n");
         DEBUG(ss_pause(mpegFile));
         cd_is_paused = 1;
     }
 
-    if (full_cnt <= 50 && cd_is_paused) {
+    if (full_cnt <= 40 && cd_is_paused) {
         printf("cont!\n");
         DEBUG(ss_cont(mpegFile));
         cd_is_paused = 0;
@@ -708,7 +703,7 @@ void record_state() {
             regdump[regdump_index][18] = V_LastSCR;
             regdump[regdump_index][19] = V_DTSVal;
             regdump[regdump_index][20] = piccnt;
-            regdump[regdump_index][21] = full_cnt;
+            regdump[regdump_index][21] = full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
             regdump[regdump_index][22] = vdi_cmd;
             regdump[regdump_index][23] = picrate;
             regdump[regdump_index][24] = imgrt;

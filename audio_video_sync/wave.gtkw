@@ -1,15 +1,15 @@
 [*]
 [*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
-[*] Mon Jun 29 13:11:36 2026
+[*] Thu Aug 13 19:28:02 2026
 [*]
 [dumpfile] "/home/andre/GIT/Nobelia/audio_video_sync/out.vcd"
-[dumpfile_mtime] "Mon Jun 29 13:11:23 2026"
-[dumpfile_size] 7670
+[dumpfile_mtime] "Thu Aug 13 19:27:28 2026"
+[dumpfile_size] 63148
 [savefile] "/home/andre/GIT/Nobelia/audio_video_sync/wave.gtkw"
 [timestart] 0
 [size] 1920 1152
-[pos] -1 -1
-*-15.681681 152900 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[pos] 2194 52
+*-19.747456 3239000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
 [sst_width] 209
 [signals_width] 340
 [sst_expanded] 1
