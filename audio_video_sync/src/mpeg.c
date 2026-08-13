@@ -19,7 +19,7 @@
 /* #define HOSTPLAY */
 #define DO_PAUSE
 /* #define DO_SLOWMO */
-/* #define PRINT_REGISTERS */
+#define PRINT_REGISTERS
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -473,7 +473,6 @@ int sigCode;
             }
 
             DEBUG(mv_status(mvPath, &mvstat));
-
 #endif
 
             if (mpegStatus == MPP_INIT)
@@ -481,7 +480,7 @@ int sigCode;
 
             piccnt++;
 #ifdef DO_PAUSE
-            if ((piccnt % 20) == 19) {
+            if ((piccnt % 70) == 2) {
                 do_pause = 1;
                 restart_playback_blank_cnt = 15;
             }
@@ -534,11 +533,11 @@ int sigCode;
                 print_registers();
         }
 #ifdef DO_PAUSE
-        if (restart_playback_blank_cnt > 1) {
+        if (restart_playback_blank_cnt) {
             restart_playback_blank_cnt--;
-if (!restart_playback_blank_cnt) {
-DEBUG(mv_continue(mvPath, 0));
-}
+            if (!restart_playback_blank_cnt) {
+                DEBUG(mv_continue(mvPath, 0));
+            }
         }
 #endif
         vblankcnt++;
@@ -563,11 +562,10 @@ void poll_state() {
         time[0] = FMA_DCLK;
         DEBUG(mv_pause(mvPath));
         time[1] = FMA_DCLK;
-        printf("Pause took %d %d\n", time[1] - time[0]);
+        printf("Pause took %d\n", time[1] - time[0]);
 
         do_pause = 0;
     }
-
 
     if (full_cnt >= 100 && !cd_is_paused) {
         print_registers();
@@ -581,8 +579,6 @@ void poll_state() {
         DEBUG(ss_cont(mpegFile));
         cd_is_paused = 0;
     }
-
-
 }
 
 void record_state() {
@@ -712,8 +708,7 @@ void record_state() {
             regdump[regdump_index][18] = V_LastSCR;
             regdump[regdump_index][19] = V_DTSVal;
             regdump[regdump_index][20] = piccnt;
-            regdump[regdump_index][21] =
-                full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
+            regdump[regdump_index][21] = full_cnt;
             regdump[regdump_index][22] = vdi_cmd;
             regdump[regdump_index][23] = picrate;
             regdump[regdump_index][24] = imgrt;
