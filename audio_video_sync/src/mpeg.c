@@ -480,9 +480,9 @@ int sigCode;
 
             piccnt++;
 #ifdef DO_PAUSE
-            if ((piccnt % 70) == 2) {
+            if ((piccnt == 8) {
                 do_pause = 1;
-                restart_playback_blank_cnt = 15;
+                restart_playback_blank_cnt = 20;
             }
 #endif
 
