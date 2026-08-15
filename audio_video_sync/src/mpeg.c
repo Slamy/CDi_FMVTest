@@ -336,7 +336,7 @@ void mpegPic() {
 
 int sigcnt = 0;
 #define REGDUMP_SIZE 1000
-static unsigned long regdump[REGDUMP_SIZE][28];
+static unsigned long regdump[REGDUMP_SIZE][29];
 
 static int regdump_index = 0;
 static int recording_stopped = 0;
@@ -347,7 +347,7 @@ static char regsize[]={
 	8,16,32,32,16,
 	16,32,32,32,16,
 	16,8,16,16,16,
-	16,
+	16,16,
 
 	/* Timestamp */
 	32
@@ -364,7 +364,7 @@ void print_registers() {
 #ifdef PRINT_REGISTERS
     for (i = 0; i < regdump_index; i++) {
         printf("%3d ", i);
-        for (j = 0; j <= 26; j++) {
+        for (j = 0; j <= 27; j++) {
             switch (regsize[j]) {
             case 0:
                 printf(" %x", regdump[i][j]);
@@ -387,6 +387,7 @@ void print_registers() {
 }
 
 static unsigned long last_dclk = 0;
+static unsigned long last_fmv_dclk = 0;
 
 unsigned short fma_sigcodebuf[8];
 unsigned short fma_sigcodebuf_wrpos = 0;
@@ -563,7 +564,6 @@ void poll_state() {
     }
 
     if (full_cnt >= 50 && !cd_is_paused) {
-        print_registers();
         printf("pause!\n");
         DEBUG(ss_pause(mpegFile));
         cd_is_paused = 1;
@@ -613,7 +613,7 @@ void record_state() {
         unsigned short picrate = FMV_PIC_RATE;
         unsigned long dclk = FMA_DCLK;
         unsigned short pics = FMV_PICS_IN_FIFO;
-        unsigned short dts = V_NISFnd; /* hack */
+        unsigned short dts = FMV_DTS;
         unsigned long imgsz = FMV_IMGSZ;
         unsigned long picsz = FMV_PICSZ;
         unsigned short imgrt = FMV_IMGRT;
@@ -626,6 +626,7 @@ void record_state() {
         unsigned short tmpref = FMV_TMPREF;
         unsigned long pictimecd = FMV_PICTIMECD;
         unsigned long imgtimecd = FMV_IMGTIMECD;
+        unsigned long fmv_dclk = FMV_DCLK;
 
         static unsigned long last_V_BufStat;
         static unsigned long last_V_Status;
@@ -703,12 +704,15 @@ void record_state() {
             regdump[regdump_index][18] = V_LastSCR;
             regdump[regdump_index][19] = V_DTSVal;
             regdump[regdump_index][20] = piccnt;
-            regdump[regdump_index][21] = full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
+            regdump[regdump_index][21] =
+                full_cnt | ((FMV_STS & 0x2000) ? 0x00 : 0x80);
             regdump[regdump_index][22] = vdi_cmd;
             regdump[regdump_index][23] = picrate;
             regdump[regdump_index][24] = imgrt;
             regdump[regdump_index][25] = picrt;
-            regdump[regdump_index][26] = dclkdiff;
+            regdump[regdump_index][26] = fmv_dclk;
+            
+            regdump[regdump_index][27] = dclkdiff;
 
             regdump_index++;
 
@@ -724,6 +728,7 @@ void record_state() {
             last_V_LastSCR = V_LastSCR;
             last_V_DTSVal = V_DTSVal;
 
+            last_fmv_dclk = fmv_dclk;
             last_dclk = dclk;
             last_picsz = picsz;
             last_picrt = picrt;

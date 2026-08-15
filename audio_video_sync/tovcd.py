@@ -1,6 +1,6 @@
 from vcd import VCDWriter
 
-signals=[("dts", 32),
+signals=[("FMV_DTS", 32),
          ("FMV_PICS_IN_FIFO", 8),
          ("V_BufStat", 8),
          ("FMA_Sig", 16),
@@ -29,7 +29,9 @@ signals=[("dts", 32),
          ("GEN_VDI_CMD", 16),
          ("PIC_RATE", 16),
          ("FMV_IMGRT", 16),
+
          ("FMV_PICRT", 16),
+         ("FMV_DCLK", 16),
          ]
 
 
