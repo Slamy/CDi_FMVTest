@@ -472,7 +472,7 @@ int sigCode;
 
             piccnt++;
 #ifdef DO_PAUSE
-            if (piccnt == 40) {
+            if (piccnt == 30) {
                 do_pause = 1;
             }
 #endif
@@ -552,7 +552,7 @@ void poll_state() {
         DEBUG(mv_pause(mvPath));
         time[1] = FMA_DCLK;
         printf("Pause took %d\n", time[1] - time[0]);
-        restart_playback_blank_cnt = 20;
+        restart_playback_blank_cnt = 60;
 
         do_pause = 0;
     }
