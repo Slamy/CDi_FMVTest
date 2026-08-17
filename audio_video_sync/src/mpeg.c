@@ -275,9 +275,16 @@ void playMpeg() {
 
     /* Assume we are not running from serial stub first */
     mpegFile = open("/cd/VIDEO01.RTF", _READ);
+    if (mpegFile < 0) {
+        /* We are running via serial stub on real hardware and Top Gun Disc? */
+        printf("Serial stub?\n");
+        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
+        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
+        mpegFile = open("/cd/ma", _READ); /* Lost Ride Map A*/
+    }
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0, 0));
+    DEBUG(lseek(mpegFile, 0x03520800, 0));
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
@@ -649,6 +656,7 @@ void record_state() {
         static unsigned short last_tmpref;
         static unsigned long last_pictimecd;
         static unsigned long last_imgtimecd;
+        static int last_piccnt;
 
         static short last_vblankcnt;
 
@@ -659,7 +667,7 @@ void record_state() {
             (last_V_BufStat != V_BufStat) || (last_V_Status != V_Status) ||
             (last_V_Stat != V_Stat) || (last_picsz != picsz) ||
             (last_reg_imgsz != imgsz) || (last_imgrt != imgrt) ||
-            (last_picrt != picrt) ||
+            (last_picrt != picrt) || (last_piccnt != piccnt) ||
             (fma_sigcodebuf_wrpos != fma_sigcodebuf_rdpos) ||
             (fmv_sigcodebuf_wrpos != fmv_sigcodebuf_rdpos) ||
             (last_md_imgsz != md_imgsz) || (last_md_timecd != md_timecd) ||
@@ -741,6 +749,7 @@ void record_state() {
             last_tmpref = tmpref;
             last_pictimecd = pictimecd;
             last_imgtimecd = imgtimecd;
+            last_piccnt = piccnt;
 
             reset_after_event = 0;
 
