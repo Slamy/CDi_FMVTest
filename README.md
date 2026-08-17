@@ -31,7 +31,8 @@ Clone https://github.com/TwBurn/cdi-sdk by updating the git submodules and have 
 
 	ln -s $(realpath cdi-sdk) ~/.wine/dosdevices/d:
 
-For stub loading this application on a CD-i using the serial port, [cdilink](https://www.cdiemu.org/?body=site/cdilink.htm) is required.
+For serial stub loading and debug print output, install `cdi-serial` and ensure it is available on
+`PATH`.
 
 ### Compiling
 
@@ -69,6 +70,10 @@ Keep in mind that MAME currently has no DVC emulation! It won't work!
 ### Start application via stub loader
 
 Not feeling like burning yet another CD today? All examples here can be launched via stub loading over UART!
+
+`stub_load.sh` compiles the current example, downloads it with `cdi-serial`,
+and keeps a 9600-baud serial terminal open for debug output. Install
+`cdi-serial` first so it is available on `PATH`.
 
 	./stub_load.sh
 
