@@ -273,10 +273,20 @@ void playMpeg() {
                     &mvStatus, -1, 0));
 #endif
 
+    /* Assume we are not running from serial stub first */
     mpegFile = open("/cd/VIDEO01.RTF", _READ);
+    if (mpegFile < 0) {
+        /* We are running via serial stub on real hardware and Top Gun Disc? */
+        printf("Serial stub?\n");
+        /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
+        /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
+        /*mpegFile = open("/cd/ma", _READ);*/ /* Lost Ride Map A*/
+        		mpegFile = open("/cd/RTF/application.rtf", _READ); /* Guignol */
+
+    }
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0, 0));
+    DEBUG(lseek(mpegFile, 0x11DEA000, 0));
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
