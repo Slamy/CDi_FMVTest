@@ -280,13 +280,12 @@ void playMpeg() {
         printf("Serial stub?\n");
         /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
         /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
-        /*mpegFile = open("/cd/ma", _READ);*/ /* Lost Ride Map A*/
-        		mpegFile = open("/cd/RTF/application.rtf", _READ); /* Guignol */
-
+        /*mpegFile = open("/cd/ma", _READ);*/              /* Lost Ride Map A*/
+        mpegFile = open("/cd/RTF/application.rtf", _READ); /* Guignol */
     }
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0x11DEA000, 0));
+    DEBUG(lseek(mpegFile, 0x11DEA000, 0)); /* 299802624 */
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
@@ -721,7 +720,7 @@ void record_state() {
             regdump[regdump_index][24] = imgrt;
             regdump[regdump_index][25] = picrt;
             regdump[regdump_index][26] = fmv_dclk;
-            
+
             regdump[regdump_index][27] = dclkdiff;
 
             regdump_index++;
