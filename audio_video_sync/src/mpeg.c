@@ -14,12 +14,12 @@
 #include "graphics.h"
 
 /* Have at least one of them enabled! */
-/* #define ENABLE_AUDIO */
+#define ENABLE_AUDIO
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
-#define DO_PAUSE
-/* #define DO_SLOWMO */
-#define PRINT_REGISTERS
+/* #define DO_PAUSE */
+#define DO_SLOWMO
+/* #define PRINT_REGISTERS */
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -266,11 +266,11 @@ void playMpeg() {
 #else
 /* Setup MPEG Playback */
 #ifdef ENABLE_AUDIO
-    DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, -1, 0));
+    DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, -2, 0));
 #endif
 #ifdef ENABLE_VIDEO
     DEBUG(mv_cdplay(mvPath, mvMapId, MV_SPEED_NORMAL, MV_NO_OFFSET, mvPcl,
-                    &mvStatus, -1, 0));
+                    &mvStatus, maPath, 0));
 #endif
 
     /* Assume we are not running from serial stub first */
