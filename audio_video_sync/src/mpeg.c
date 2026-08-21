@@ -280,11 +280,11 @@ void playMpeg() {
         printf("Serial stub?\n");
         /* mpegFile = open("/cd/MPEGAV/AVSEQ01.DAT", _READ); */
         /* mpegFile = open("/cd/MPEGAV/MUSIC01.DAT", _READ); */ /* Top Gun*/
-        mpegFile = open("/cd/ma", _READ); /* Lost Ride Map A*/
+        mpegFile = open("/cd/seq2.rtf", _READ); /* Addams Family Disc 2 */
     }
     DEBUG(mpegFile >= 0);
 
-    DEBUG(lseek(mpegFile, 0x03520800, 0));
+    DEBUG(lseek(mpegFile, 0x8d65800, 0)); /* Mamushka! */
     DEBUG(ss_play(mpegFile, &mpegPcb));
     printf("Started Play %d\n", mpegFile);
 #endif
