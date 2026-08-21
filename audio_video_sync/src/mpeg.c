@@ -18,8 +18,9 @@
 #define ENABLE_VIDEO
 /* #define HOSTPLAY */
 /* #define DO_PAUSE */
-#define DO_SLOWMO
-/* #define PRINT_REGISTERS */
+/* #define DO_SLOWMO */
+#define DO_FREEZE
+#define PRINT_REGISTERS
 
 #ifdef HOSTPLAY
 #include "cross_audio.h"
@@ -405,6 +406,7 @@ unsigned short fmv_sigcodebuf_wrpos = 0;
 unsigned short fmv_sigcodebuf_rdpos = 0;
 
 int do_pause = 0;
+int do_freeze = 0;
 static int piccnt = 0;
 int inform_normalized = 0;
 int frames_until_normalized = 0;
@@ -484,6 +486,12 @@ int sigCode;
             }
 #endif
 
+#ifdef DO_FREEZE
+            if (piccnt == 30) {
+                do_freeze = 1;
+            }
+#endif
+
 #ifdef DO_SLOWMO
             if (piccnt == 60) {
                 DEBUG(mv_chspeed(mvPath, 3, 0, NULL));
@@ -528,7 +536,7 @@ int sigCode;
         if (finished_playback_blank_cnt) {
             finished_playback_blank_cnt--;
         }
-#ifdef DO_PAUSE
+#if defined(DO_PAUSE) || defined(DO_FREEZE)
         if (restart_playback_blank_cnt) {
             restart_playback_blank_cnt--;
             if (!restart_playback_blank_cnt) {
@@ -552,6 +560,7 @@ void poll_state() {
     record_state();
     sigmask(-1);
 
+#ifdef DO_PAUSE
     if (do_pause) {
         int time[2];
 
@@ -563,6 +572,21 @@ void poll_state() {
 
         do_pause = 0;
     }
+#endif
+
+#ifdef DO_FREEZE
+    if (do_freeze) {
+        int time[2];
+
+        time[0] = FMA_DCLK;
+        DEBUG(mv_freeze(mvPath));
+        time[1] = FMA_DCLK;
+        printf("Freeze took %d\n", time[1] - time[0]);
+        restart_playback_blank_cnt = 60;
+
+        do_freeze = 0;
+    }
+#endif
 
     for (i = 0; i < MV_PCL_COUNT; i++) {
         if (mvPcl[i].PCL_Ctrl & 0x01) {
