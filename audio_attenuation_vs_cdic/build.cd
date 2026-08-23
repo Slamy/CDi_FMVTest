@@ -1,18 +1,18 @@
 options: -s
 
 define
-	album		"FMVTest"
+	album		"CDICTest"
 	publisher	"ANDRE ZEPS"
 	preparer	"ANDRE ZEPS"
 
-	volume	"FMVTest"	in	"DISK/FMVTEST.CDI"
+	volume	"CDICTest"	in	"DISK/CDICTEST.CDI"
 
 	copyright	file	Copyright	from "BUILD/COPYRGHT.TXT"
 	abstract	file	Abstract	from "BUILD/ABSTRACT.TXT"
 	biblio		file	Biblio		from "BUILD/BIBLIOGR.TXT"
 	message							from "BUILD/MESSAGE.TXT"
 
-	application file	MainApp     from "BUILD/FMVTEST"
+	application file	MainApp     from "BUILD/CDICTEST"
 	green       file    musicRtf    from "BUILD/zmusic.rtr"
 
 
@@ -20,7 +20,7 @@ define
 	"COPYRGHT.TXT"	owner 0.0 protection 0x111	from	Copyright
 	"ABSTRACT.TXT"	owner 0.0 protection 0x111	from	Abstract
 	"BIBLIOGR.TXT"	owner 0.0 protection 0x111	from	Biblio
-	"CDI_FMVTEST"   owner 0.0 protection 0x555	from	MainApp
+	"CDI_CDICTEST"   owner 0.0 protection 0x555	from	MainApp
 	"zmusic.rtr"	owner 0.0 protection 0x111	from    musicRtf
 
 }

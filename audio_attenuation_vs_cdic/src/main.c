@@ -78,7 +78,7 @@ void runProgram() {
     DEBUG(ss_play(musicRtf, &musicPcb));
     printf("Started Play %d\n", musicRtf);
 
-    sleep(4);
+    sleep(1);
 
     printf("Do sm_out()!\n");
 

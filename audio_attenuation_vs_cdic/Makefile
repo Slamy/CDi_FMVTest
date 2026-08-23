@@ -1,5 +1,5 @@
 #Configuration, name, folders
-NAME    = fmvtest
+NAME    = cdictest
 OUTPUT  = out
 BUILD   = build
 SRC     = src

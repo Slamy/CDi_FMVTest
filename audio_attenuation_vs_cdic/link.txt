@@ -1,6 +1,6 @@
 -a
--n=cdi_fmvtest
--o=build\fmvtest
+-n=cdi_cdictest
+-o=build\cdictest
 D:\OS9\CDI\lib\cstart.r
 out\main.r
 out\graphics.r
