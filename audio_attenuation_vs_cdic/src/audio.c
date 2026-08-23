@@ -40,6 +40,5 @@ void startAudio(unsigned long attenuation)
 {
     /* DEBUG(sd_loop(audioPath, smId, 0, 18 * 2 - 1, 0x0FFF)); */
     /* printf("Play audiomap\n"); */
-    DEBUG(sc_atten(audioPath, attenuation)); /* Full Mix */
     DEBUG(sm_out(audioPath, smId, &smStat));
 }

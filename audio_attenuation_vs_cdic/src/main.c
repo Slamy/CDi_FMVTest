@@ -1,110 +1,117 @@
+#include <cdfm.h>
 #include <csd.h>
+#include <events.h>
+#include <setsys.h>
+#include <stdio.h>
 #include <sysio.h>
 #include <ucm.h>
-#include <events.h>
-#include <stdio.h>
-#include <setsys.h>
 
-#include "video.h"
 #include "audio.h"
 #include "graphics.h"
-#include "mpeg.h"
+#include "video.h"
 #include <signal.h>
 
+#define MPEG_SIG_PCB 0x1C00
+
+extern int errno;
+
 int exit_app = 0;
+
+#define DEBUG(c)                                                               \
+    if ((c) == -1) {                                                           \
+        printf("FAIL: c (%d)\n", errno);                                       \
+    }
+
+static int musicRtf = -1;
+static PCB musicPcb;
 
 int mainSignal(sigCode)
 int sigCode;
 {
-	if (sigCode == SIGINT)
-	{
-		printf("SIGINT!\n");
-		exit_app = 1;
-	}
-	else
-	{
-		mpegSignal(sigCode);
-	}
+    if (sigCode == SIGINT) {
+        printf("SIGINT!\n");
+        exit_app = 1;
+    } else if (sigCode == MPEG_SIG_PCB) {
+        /* Occurs when playback has finished */
+        printf("PCB %x %x %x\n", musicPcb.PCB_Stat, musicPcb.PCB_Sig);
+    } else {
+        printf("SIG %x!\n", sigCode);
+    }
 }
 
-void initProgram()
-{
+void initProgram() {}
+
+void initSystem() {
+    initVideo();
+    initAudio();
+    initGraphics();
+    initProgram();
 }
 
-void initSystem()
-{
-	initVideo();
-	initAudio();
-	initGraphics();
-	initMpeg();
-	initProgram();
+void closeSystem() { closeVideo(); }
+
+void testVolume(unsigned long attenuation) {
+    if (!exit_app) {
+        sleep(1);
+    }
 }
 
-void closeSystem()
-{
-	closeVideo();
-}
+void runProgram() {
+    unsigned long atten;
+    unsigned long i;
 
-void testVolume(unsigned long attenuation)
-{
-	if (!exit_app)
-	{
-		sleep(1);
-		StartPlayback(attenuation);
-		startAudio(attenuation);
-		while (playback_has_ended == 0)
-			;
-	}
-}
-void runProgram()
-{
-	unsigned long atten;
-	unsigned long i;
+    /* Start playback from CD */
 
-	dc_ssig(videoPath, SIG_BLANK, 0);
-	playMpeg(0x00800080);
+    musicRtf = open("/cd/zmusic.rtr", READ_);
+    musicPcb.PCB_Video = NULL;
+    musicPcb.PCB_Chan = 2;
+    musicPcb.PCB_AChan = 2;
+    musicPcb.PCB_Audio = NULL;
+    musicPcb.PCB_Stat = 0;
+    musicPcb.PCB_Data = NULL;
+    musicPcb.PCB_Rec = 1; /* assume that there is only 1 EOR */
+    musicPcb.PCB_Sig = MPEG_SIG_PCB;
 
-	testVolume(0x00800080); /* Normal L2L and R2R */
-	testVolume(0x80008000); /* Swap left and right */
-	testVolume(0x80800080); /* Only right */
-	testVolume(0x00808080); /* Only left */
+    DEBUG(musicRtf >= 0);
 
-	testVolume(0x00000000); /* All On - Evil clipping Test */
-	testVolume(0x05050505); /* All On - Evil clipping Test */
-#if 0
-	StartPlayback(0x10101010); /* All On - Evil clipping Test */
-	while (playback_has_ended == 0)
-		;
-#endif
+    DEBUG(lseek(musicRtf, 0, 0));
+    DEBUG(ss_play(musicRtf, &musicPcb));
+    printf("Started Play %d\n", musicRtf);
 
-	for (i = 0; i < 30; i += 1)
-	{
-		atten = (i << 24) | (i << 8) | 0x00800080;
-		testVolume(atten);
-	}
-	printf("Finished!\n");
-	while (!exit_app)
-	{
-	}
+    sleep(4);
+
+    printf("Do sm_out()!\n");
+
+    startAudio(0x00800080);
+    sleep(1);
+    startAudio(0x00800080);
+    sleep(1);
+    startAudio(0x00800080);
+    sleep(1);
+    startAudio(0x00800080);
+
+    printf("Finished!\n");
+    while (!exit_app) {
+    }
 }
 
 extern int os9forkc();
 extern char **environ;
 char *argblk[] = {
-	"vcd",
-	0,
+    "vcd",
+    0,
 };
 
 int main(argc, argv)
 int argc;
 char *argv[];
 {
-	intercept(mainSignal);
+    intercept(mainSignal);
 
-	initSystem();
-	runProgram();
-	closeSystem();
+    initSystem();
+    runProgram();
+    closeSystem();
 
-	sleep(1);
-	exit(0);
+    sleep(1);
+    exit(0);
 }
