@@ -66,7 +66,7 @@ static int recording_stopped = 0;
 /* clang-format off */
 static char regsize[]={
 	16,16,16,16,32,
-	32,16,16,
+	32,16,16,8,
 	/* Timestamp */
 	32
 };
@@ -83,7 +83,7 @@ void print_registers() {
 #ifdef PRINT_REGISTERS
     for (i = 0; i < regdump_index; i++) {
         printf("%3d ", i);
-        for (j = 0; j <= 8; j++) {
+        for (j = 0; j <= 9; j++) {
             switch (regsize[j]) {
             case 0:
                 printf(" %x", regdump[i][j]);
@@ -137,6 +137,7 @@ void FindCdapDriverStruct() {
 }
 
 static unsigned long last_dclk = 0;
+static unsigned short softstate = 0;
 
 void recordstate() {
 
@@ -144,8 +145,9 @@ void recordstate() {
     static unsigned short last_driv_audctl;
     static unsigned short last_driv_nextabuf;
     static unsigned short last_cdic_achan;
-    unsigned short last_coding0;
-    unsigned short last_coding1;
+    static unsigned short last_coding0;
+    static unsigned short last_coding1;
+    static unsigned short last_softstate;
 
     if (cdapdriv_static) {
         unsigned short driv_dbuf = *(unsigned short *)(cdapdriv_static + 0x92);
@@ -171,8 +173,8 @@ void recordstate() {
         unsigned long dclkdiff = dclk - last_dclk;
 
         if ((last_driv_dbuf != driv_dbuf) ||
-            (last_driv_audctl != driv_audctl) ||
-            (last_driv_nextabuf != driv_nextabuf)) {
+            (last_driv_audctl != driv_audctl) || (last_coding0 != coding0) ||
+            (last_coding1 != coding1) || (last_softstate != softstate)) {
 
             regdump[regdump_index][0] = driv_dbuf;
             regdump[regdump_index][1] = driv_audctl;
@@ -183,8 +185,9 @@ void recordstate() {
             regdump[regdump_index][5] = long_abuf_irqfunc;
             regdump[regdump_index][6] = coding0;
             regdump[regdump_index][7] = coding1;
+            regdump[regdump_index][8] = softstate;
 
-            regdump[regdump_index][8] = dclkdiff;
+            regdump[regdump_index][9] = dclkdiff;
 
             regdump_index++;
 
@@ -195,6 +198,7 @@ void recordstate() {
 
             last_coding0 = coding0;
             last_coding1 = coding1;
+            last_softstate = softstate;
 
             last_dclk = dclk;
         }
@@ -205,6 +209,7 @@ void runProgram() {
     unsigned long atten;
     unsigned long i;
     unsigned long time0, time1, diff;
+    unsigned short coding0;
 
     /* Start playback from CD */
 
@@ -226,18 +231,27 @@ void runProgram() {
 
     FindCdapDriverStruct();
 
+    while (*(unsigned short *)0x30280a != 0x6405)
+        ;
+
     /* Wait a second and record */
     time0 = FMA_DCLK;
     diff = FMA_DCLK - time0;
     while (diff < 45000) {
         diff = FMA_DCLK - time0;
+        /*
+                memset((unsigned short *)0x302810, 0, 1800);
+        memset((unsigned short *)0x303210, 0, 1800);
+                */
         recordstate();
     }
 
-    while ((CDIC_DBUF & 0xf) != 0x5)
+    /*while ((CDIC_DBUF & 0xf) != 0x5)
         recordstate();
+                */
 
     for (i = 0; i < 4; i++) {
+        softstate++;
         startAudio(0x00800080);
 
         /* Wait a second and record */

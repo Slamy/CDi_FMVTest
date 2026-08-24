@@ -1,0 +1,42 @@
+[*]
+[*] GTKWave Analyzer v3.3.127 (w)1999-2026 BSI
+[*] Mon Aug 24 11:05:49 2026
+[*]
+[dumpfile] "/home/andre/GIT/Nobelia/audio_attenuation_vs_cdic/out.vcd"
+[dumpfile_mtime] "Mon Aug 24 11:03:50 2026"
+[dumpfile_size] 6366
+[savefile] "/home/andre/GIT/Nobelia/audio_attenuation_vs_cdic/wave.gtkw"
+[timestart] 0
+[size] 1920 1152
+[pos] -1 -1
+*-17.998852 929000 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1 -1
+[sst_width] 209
+[signals_width] 297
+[sst_expanded] 1
+[sst_vpaned_height] 349
+@200
+-MiSTer
+@23
+log_mister.ABUF_IRQFUNC[31:0]
+log_mister.CDIC_ACHAN[15:0]
+log_mister.CODING0[15:0]
+log_mister.CODING1[15:0]
+log_mister.Driv_AUDCTL[15:0]
+log_mister.Driv_DBUF[15:0]
+log_mister.Driv_NextABUF[15:0]
+log_mister.SM_OUT_CNT[7:0]
+log_mister.XBUF_IRQFUNC[31:0]
+@200
+-CDIC
+@22
+log_vmpeg.ABUF_IRQFUNC[31:0]
+log_vmpeg.CDIC_ACHAN[15:0]
+log_vmpeg.CODING0[15:0]
+log_vmpeg.CODING1[15:0]
+log_vmpeg.Driv_AUDCTL[15:0]
+log_vmpeg.Driv_DBUF[15:0]
+log_vmpeg.Driv_NextABUF[15:0]
+log_vmpeg.SM_OUT_CNT[7:0]
+log_vmpeg.XBUF_IRQFUNC[31:0]
+[pattern_trace] 1
+[pattern_trace] 0
