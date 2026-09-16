@@ -15,7 +15,7 @@ The applications are designed to be played from disc and loaded via serial stub
 * [Attenuation of MPEG Audio](audio_attenuation/)
 * [Attenuation of MPEG Audio compared to the CDIC](audio_attenuation_vs_cdic/)
 * [Replication of Lost Ride railroad ambience](lost_ride_hostplay/)
-* [Failed seamless MPEG audio loop experiment](lost_ride_seamless_experiment//)
+* [Seamless MPEG audio loop](fma_seamless_audio_loop/)
 * [Inverted flying mattes](fmv_flying_mattes/)
 * [Drawing in sync with MPEG](fmv_event_timing/)
 * [Playback delay of FMA and event timing](fma_playback_delay/)
