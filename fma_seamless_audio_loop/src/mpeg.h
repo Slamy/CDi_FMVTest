@@ -1,7 +1,7 @@
 #ifndef __MPEG_H__
 #define __MPEG_H__
 
-#define MA_PCL_MAX 64
+#define MA_PCL_MAX 5
 #define MPEG_SECTOR_SIZE 2304
 #define MPEG_CHANNEL 0
 

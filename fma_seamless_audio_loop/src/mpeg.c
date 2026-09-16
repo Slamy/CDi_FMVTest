@@ -9,36 +9,29 @@
 
 #include "hwreg.h"
 #include "mpeg.h"
+#include "sfx_start.c"
+#include "sfx_restart.c"
 #include "sfx1.c"
 #include "sfx2.c"
+#include "song_sequence.inc"
 
 /*
  * This is an audio-only MPEG Program Stream player for CD-i.
  *
- * build.sh produces two independent MP2/Program-Stream assets.  The player
- * starts with loop 1, supplies it four times, then supplies loop 2 four
- * times, and repeats that pattern without stopping the hardware decoder.
+ * build.sh produces independent MP2/Program-Stream parts and a generated
+ * songSequence table.  Every entry in that table points at exactly one MPEG
+ * sector, so parts may be repeated or entered at an arbitrary sector.
  * PCL buffers are reused only after the MPEG driver has consumed them.
  */
 
 extern int errno;
 
-#define DEBUG(c)                                                               \
+#define CHECK(c, label)                                                        \
     if ((c) == -1) {                                                           \
-        printf("FAIL: c (%d)\n", errno);                                       \
+        printf("MPEG error: %s (errno %d)\n", label, errno);                 \
     }
 
 #define PCL_READY 0x01
-#define MPEG_DEBUG_PCLS 0
-
-/* Kept callable while the expensive PCL status trace is disabled. */
-static void dump_pcls(tag) char *tag;
-{
-#if MPEG_DEBUG_PCLS
-    printf("MPEG %s cur=%d cycle=%lu\n", tag, currentPcl,
-           (unsigned long)streamCycle);
-#endif
-}
 
 int mpegStatus;
 int maPath, maMapId;
@@ -49,44 +42,44 @@ static PCL maPcl[MA_PCL_MAX];
 static PCL *maCil[16];
 static STAT_BLK maStatus;
 
-/* RAM backing store for the PCL ring.  Generated assets remain immutable. */
-static char *mpegDataBuffer;
 static int maPclCount;
 static int currentPcl;             /* next returned PCL to refill */
-static unsigned long long streamCycle;   /* number of complete PCL rings */
-static unsigned long long timelineTicks; /* monotonic 90 kHz stream time */
-static int activeLoop;             /* 0 = sfx1, 1 = sfx2 */
+static int nextSequenceSector;
 
-#define LOOP_COUNT 2
-#define LOOP_REPETITIONS 4
+#define SOURCE_COUNT 4
+#define MAX_SOURCE_SECTORS 16
 
 typedef struct {
-    unsigned char *data;          /* immutable bytes from generated sfx*.c */
+    char *name;
+    unsigned char *data;
     unsigned long length;
-    unsigned long periodTicks;    /* exact MP2 duration, in 90 kHz ticks */
-    int pclCount;                 /* must match between switchable loops */
-    unsigned long long scr[MA_PCL_MAX];
-    unsigned long long pts[MA_PCL_MAX];
-    int scrOffset[MA_PCL_MAX];    /* -1 for a PES-continuation sector */
-    int ptsOffset[MA_PCL_MAX];    /* -1 when no new PES starts in sector */
+    unsigned long periodTicks;
+    int sectorCount;
+    unsigned long long scr[MAX_SOURCE_SECTORS];
+    unsigned long long pts[MAX_SOURCE_SECTORS];
+    int scrOffset[MAX_SOURCE_SECTORS];
+    int ptsOffset[MAX_SOURCE_SECTORS];
     unsigned long long firstRegularScr;
     unsigned long long normalScrDelta;
     int hasMuxPreroll;
-} LoopSource;
+} SongSource;
 
-static LoopSource loopSource[LOOP_COUNT];
+static SongSource source[SOURCE_COUNT];
+static SongSource *partSource;
+static unsigned long long timelineTicks;
+static unsigned long long partTrimTicks;
+static unsigned long long lastScr;
+static int partStartSector;
+static int sequenceStarted;
+static int haveLastScr;
 
-static unsigned long long get_timestamp(p)
-unsigned char *p;
+static unsigned long long get_timestamp(p) unsigned char *p;
 {
-    unsigned long long value;
-
-    value = ((unsigned long long)((p[0] >> 1) & 0x07)) << 30;
-    value |= ((unsigned long long)p[1]) << 22;
-    value |= ((unsigned long long)(p[2] & 0xfe)) << 14;
-    value |= ((unsigned long long)p[3]) << 7;
-    value |= ((unsigned long long)(p[4] & 0xfe)) >> 1;
-    return value;
+    return ((unsigned long long)((p[0] >> 1) & 7) << 30) |
+           ((unsigned long long)p[1] << 22) |
+           ((unsigned long long)(p[2] & 0xfe) << 14) |
+           ((unsigned long long)p[3] << 7) |
+           ((unsigned long long)(p[4] & 0xfe) >> 1);
 }
 
 static void set_timestamp(p, value) unsigned char *p;
@@ -99,64 +92,33 @@ unsigned long long value;
     p[4] = 0x01 | ((value << 1) & 0xfe);
 }
 
-static int find_audio_pts(sector)
-unsigned char *sector;
+static int find_audio_pts(sector) unsigned char *sector;
 {
+    static int offsets[] = { 0, 12, 27 };
+    int i;
     int offset;
 
-    /* MPEG-1 PES: 00 00 01 c0, length, then the five-byte PTS. */
-    for (offset = 0; offset <= MPEG_SECTOR_SIZE - 11; offset++) {
-        if (sector[offset] == 0x00 && sector[offset + 1] == 0x00 &&
-            sector[offset + 2] == 0x01 && sector[offset + 3] == 0xc0 &&
+    /* MPEG Program Stream packet headers from embed_mpeg.py occur only at
+     * these positions.  Searching arbitrary MP2 payload bytes can mistake a
+     * compressed-audio bit pattern for a PES header and corrupt it. */
+    for (i = 0; i < 3; i++) {
+        offset = offsets[i];
+        if (sector[offset] == 0 && sector[offset + 1] == 0 &&
+            sector[offset + 2] == 1 && sector[offset + 3] == 0xc0 &&
             (sector[offset + 6] & 0xf0) == 0x20)
             return offset + 6;
     }
     return -1;
 }
 
-static int find_pack_scr(sector)
-unsigned char *sector;
+static int find_pack_scr(sector) unsigned char *sector;
 {
     int offset;
-
-    for (offset = 0; offset <= MPEG_SECTOR_SIZE - 9; offset++) {
-        if (sector[offset] == 0x00 && sector[offset + 1] == 0x00 &&
-            sector[offset + 2] == 0x01 && sector[offset + 3] == 0xba)
+    for (offset = 0; offset <= MPEG_SECTOR_SIZE - 9; offset++)
+        if (sector[offset] == 0 && sector[offset + 1] == 0 &&
+            sector[offset + 2] == 1 && sector[offset + 3] == 0xba)
             return offset + 4;
-    }
     return -1;
-}
-
-static void print_pcl_timestamps(pcl, buffer) PCL *pcl;
-char *buffer;
-{
-    unsigned char *sector;
-    unsigned long long scr;
-    unsigned long long pts;
-    int scrOffset;
-    int ptsOffset;
-
-    sector = (unsigned char *)buffer;
-    ptsOffset = find_audio_pts(sector);
-    if (ptsOffset < 0) {
-        printf("MPEG PCL_INIT loop=%d n=%d cycle=%lu no-pts\n", activeLoop + 1,
-               (int)(pcl - maPcl), (unsigned long)streamCycle);
-        return;
-    }
-
-    pts = get_timestamp(&sector[ptsOffset]);
-    scrOffset = find_pack_scr(sector);
-    if (scrOffset < 0) {
-        printf("MPEG PCL_INIT loop=%d n=%d cycle=%lu scr=none pts=%lx:%08lx\n",
-               activeLoop + 1, (int)(pcl - maPcl), (unsigned long)streamCycle,
-               (unsigned long)(pts >> 32), (unsigned long)pts);
-        return;
-    }
-    scr = get_timestamp(&sector[scrOffset]);
-    printf("MPEG PCL_INIT loop=%d n=%d cycle=%lu scr=%lx:%08lx pts=%lx:%08lx\n",
-           activeLoop + 1, (int)(pcl - maPcl), (unsigned long)streamCycle,
-           (unsigned long)(scr >> 32), (unsigned long)scr,
-           (unsigned long)(pts >> 32), (unsigned long)pts);
 }
 
 static void init_pcl(pcl, next, buffer) PCL *pcl;
@@ -173,116 +135,170 @@ char *buffer;
     pcl->PCL_Cnt = 0;
 }
 
-static int init_timestamps(source)
-LoopSource *source;
+static int init_timestamps(s) SongSource *s;
 {
     int i;
-    int firstScr;
-    int secondScr;
-    int thirdScr;
+    int first;
+    int second;
+    int third;
+    int firstPts;
     unsigned char *sector;
-    unsigned long long lastDelta;
 
-    if ((source->length % MPEG_SECTOR_SIZE) != 0 || source->length == 0 ||
-        source->length > MA_PCL_MAX * MPEG_SECTOR_SIZE)
+    if (!s->length) {
+        printf("MPEG error: %s is empty\n", s->name);
         return -1;
-    source->pclCount = source->length / MPEG_SECTOR_SIZE;
-
-    /*
-     * A PCL is always 2,304 bytes, but MPEG pack/PES boundaries need not
-     * align to it.  At lower bitrates a PCL may be a continuation payload;
-     * such a sector has no new SCR and/or PTS and is valid.
-     */
-    firstScr = secondScr = thirdScr = -1;
-    for (i = 0; i < source->pclCount; i++) {
-        sector = &source->data[i * MPEG_SECTOR_SIZE];
-        source->scrOffset[i] = find_pack_scr(sector);
-        if (source->scrOffset[i] >= 0) {
-            source->scr[i] = get_timestamp(&sector[source->scrOffset[i]]);
-            if (firstScr < 0)
-                firstScr = i;
-            else if (secondScr < 0)
-                secondScr = i;
-            else if (thirdScr < 0)
-                thirdScr = i;
-        }
-        source->ptsOffset[i] = find_audio_pts(sector);
-        if (source->ptsOffset[i] >= 0)
-            source->pts[i] = get_timestamp(&sector[source->ptsOffset[i]]);
     }
-
-    if (source->pclCount < 2 || firstScr < 0 || secondScr < 0)
+    if (s->length % MPEG_SECTOR_SIZE) {
+        printf("MPEG error: %s length %lu is not sector aligned\n",
+               s->name, s->length);
         return -1;
-
-    lastDelta = source->scr[secondScr] - source->scr[firstScr];
-    source->firstRegularScr = source->scr[secondScr];
-    source->normalScrDelta = lastDelta;
-    if (thirdScr >= 0)
-        source->normalScrDelta = source->scr[thirdScr] - source->scr[secondScr];
-    if (!source->periodTicks)
-        source->periodTicks =
-            source->scr[secondScr] - source->scr[firstScr] + lastDelta;
-    source->hasMuxPreroll =
-        firstScr == 0 && source->scr[firstScr] == 0 &&
-        source->scr[secondScr] > source->normalScrDelta * 2;
-    return source->periodTicks ? 0 : -1;
+    }
+    if (s->length / MPEG_SECTOR_SIZE > MAX_SOURCE_SECTORS) {
+        printf("MPEG error: %s has too many sectors (%lu, max %d)\n",
+               s->name, s->length / MPEG_SECTOR_SIZE, MAX_SOURCE_SECTORS);
+        return -1;
+    }
+    s->sectorCount = s->length / MPEG_SECTOR_SIZE;
+    first = second = third = firstPts = -1;
+    for (i = 0; i < s->sectorCount; i++) {
+        sector = s->data + i * MPEG_SECTOR_SIZE;
+        s->scrOffset[i] = find_pack_scr(sector);
+        s->ptsOffset[i] = find_audio_pts(sector);
+        if (s->scrOffset[i] >= 0) {
+            s->scr[i] = get_timestamp(sector + s->scrOffset[i]);
+            if (first < 0) first = i;
+            else if (second < 0) second = i;
+            else if (third < 0) third = i;
+        }
+        if (s->ptsOffset[i] >= 0) {
+            s->pts[i] = get_timestamp(sector + s->ptsOffset[i]);
+            if (firstPts < 0)
+                firstPts = i;
+        }
+    }
+    if (first < 0) {
+        printf("MPEG error: %s contains no pack SCR\n", s->name);
+        return -1;
+    }
+    if (firstPts < 0) {
+        printf("MPEG error: %s contains no audio PTS\n", s->name);
+        return -1;
+    }
+    if (second < 0) {
+        /* The three-frame intro is a valid one-sector Program Stream. */
+        s->firstRegularScr = s->scr[first];
+        s->normalScrDelta = 0;
+        s->hasMuxPreroll = 0;
+        return 0;
+    }
+    s->firstRegularScr = s->scr[second];
+    s->normalScrDelta = s->scr[second] - s->scr[first];
+    if (third >= 0)
+        s->normalScrDelta = s->scr[third] - s->scr[second];
+    s->hasMuxPreroll = first == 0 && s->scr[first] == 0 &&
+                       s->scr[second] > s->normalScrDelta * 2;
+    return 0;
 }
 
-static void retime_sector(index) int index;
+static SongSource *source_for_sector(sector, sectorIndex)
+unsigned char *sector;
+int *sectorIndex;
 {
-    LoopSource *source;
+    int i;
+    for (i = 0; i < SOURCE_COUNT; i++)
+        if (sector >= source[i].data && sector < source[i].data + source[i].length) {
+            *sectorIndex = (sector - source[i].data) / MPEG_SECTOR_SIZE;
+            return &source[i];
+        }
+    return NULL;
+}
+
+static unsigned long long first_pts(s, from) SongSource *s;
+int from;
+{
+    int i;
+    for (i = from; i < s->sectorCount; i++)
+        if (s->ptsOffset[i] >= 0)
+            return s->pts[i];
+    return 0;
+}
+
+static void start_part(s, sectorIndex) SongSource *s;
+int sectorIndex;
+{
+    if (sequenceStarted)
+        timelineTicks += partSource->periodTicks - partTrimTicks;
+    sequenceStarted = 1;
+    partSource = s;
+    partStartSector = sectorIndex;
+    partTrimTicks = first_pts(s, sectorIndex) - first_pts(s, 0);
+}
+
+static void load_sector(index) int index;
+{
     unsigned char *sector;
+    SongSource *currentSource;
+    int sectorIndex;
+    int previous;
+    int newPart;
     unsigned long long scr;
     unsigned long long pts;
 
-    sector = (unsigned char *)&mpegDataBuffer[index * MPEG_SECTOR_SIZE];
-    source = &loopSource[activeLoop];
-    if (source->hasMuxPreroll && index == 0 && timelineTicks != 0) {
-        /* Place a repeated preload pack immediately before pack one. */
-        scr = source->firstRegularScr + timelineTicks - source->normalScrDelta;
-    } else {
-        scr = source->scr[index] + timelineTicks;
+    sector = songSequence[nextSequenceSector];
+    scr = pts = 0;
+    currentSource = source_for_sector(sector, &sectorIndex);
+    if (currentSource == NULL) {
+        printf("MPEG error: sequence %d points outside every source\n",
+               nextSequenceSector);
+        return;
+    }
+    previous = (nextSequenceSector + SONG_SEQUENCE_SECTOR_COUNT - 1) %
+               SONG_SEQUENCE_SECTOR_COUNT;
+    newPart = !sequenceStarted || currentSource != partSource ||
+              sector != songSequence[previous] + MPEG_SECTOR_SIZE;
+    if (newPart) {
+        start_part(currentSource, sectorIndex);
     }
 
-    /* Rewrite only timing fields physically present in this PCL. */
-    if (source->scrOffset[index] >= 0)
-        set_timestamp(&sector[source->scrOffset[index]], scr);
-    if (source->ptsOffset[index] >= 0) {
-        pts = source->pts[index] + timelineTicks;
-        set_timestamp(&sector[source->ptsOffset[index]], pts);
+    /* With five PCLs, this sector cannot still be owned by the decoder when
+     * it appears again in this song.  Retiming it in-place removes memcpy. */
+    if (currentSource->scrOffset[sectorIndex] >= 0) {
+        if (currentSource->hasMuxPreroll && sectorIndex == 0 &&
+            partStartSector == 0 && timelineTicks != 0)
+            scr = currentSource->firstRegularScr + timelineTicks -
+                  currentSource->normalScrDelta;
+        else
+            scr = currentSource->scr[sectorIndex] - partTrimTicks +
+                  timelineTicks;
+        if (haveLastScr && scr <= lastScr)
+            scr = lastScr + 1;
+        set_timestamp(sector + currentSource->scrOffset[sectorIndex], scr);
+        lastScr = scr;
+        haveLastScr = 1;
     }
-}
-
-static void load_and_retime_sector(index) int index;
-{
-    LoopSource *source;
-
-    source = &loopSource[activeLoop];
-    /* Copy first: retiming must never modify the generated source asset. */
-    memcpy(&mpegDataBuffer[index * MPEG_SECTOR_SIZE],
-           &source->data[index * MPEG_SECTOR_SIZE], MPEG_SECTOR_SIZE);
-    retime_sector(index);
+    if (currentSource->ptsOffset[sectorIndex] >= 0) {
+        pts = currentSource->pts[sectorIndex] - partTrimTicks + timelineTicks;
+        set_timestamp(sector + currentSource->ptsOffset[sectorIndex], pts);
+    }
+    maPcl[index].PCL_Buf = (char *)sector;
+    nextSequenceSector++;
+    if (nextSequenceSector == SONG_SEQUENCE_SECTOR_COUNT) {
+        /* start.mp2 is a one-time intro; subsequent passes begin at restart. */
+        nextSequenceSector = SONG_SEQUENCE_REPEAT_START;
+    }
 }
 
 static void service_pcls() {
     PCL *pcl;
-    char *buffer;
 
     /* The driver clears/changes a PCL after consuming its preloaded sector. */
     while (maPcl[currentPcl].PCL_Ctrl != PCL_READY) {
-        if (currentPcl == 0) {
-            /* The completed loop determines both elapsed time and next asset. */
-            timelineTicks += loopSource[activeLoop].periodTicks;
-            streamCycle++;
-            /* Cycles 0..3 use loop 1; 4..7 use loop 2; then repeat. */
-            if ((streamCycle % LOOP_REPETITIONS) == 0)
-                activeLoop = (activeLoop + 1) % LOOP_COUNT;
-        }
-
         pcl = &maPcl[currentPcl];
-        buffer = &mpegDataBuffer[currentPcl * MPEG_SECTOR_SIZE];
-        load_and_retime_sector(currentPcl);
-        init_pcl(pcl, &maPcl[(currentPcl + 1) % maPclCount], buffer);
+        if (pcl->PCL_Err != NULL)
+            printf("MPEG error: PCL %d reported an error\n", currentPcl);
+        load_sector(currentPcl);
+        init_pcl(pcl, &maPcl[(currentPcl + 1) % maPclCount],
+                 maPcl[currentPcl].PCL_Buf);
         currentPcl = (currentPcl + 1) % maPclCount;
     }
 }
@@ -296,63 +312,86 @@ void initMpeg() {
     char *devName;
     int i;
 
-    /* Associate the generated C arrays with the runtime source descriptors. */
-    loopSource[0].data = loop1_mpg;
-    loopSource[0].length = loop1_mpg_len;
-    loopSource[0].periodTicks = loop1_mpg_period_90k;
-    loopSource[1].data = loop2_mpg;
-    loopSource[1].length = loop2_mpg_len;
-    loopSource[1].periodTicks = loop2_mpg_period_90k;
+    /* Leave later play attempts in a diagnosable stopped state on any error. */
+    maPath = -1;
+    maPclCount = 0;
 
-    /* A fixed PCL ring can switch sources only if their sector counts match. */
-    if (init_timestamps(&loopSource[0]) == -1 ||
-        init_timestamps(&loopSource[1]) == -1 ||
-        loopSource[0].pclCount != loopSource[1].pclCount) {
-        printf("Invalid or incompatible embedded MPEG loops\n");
+    source[0].data = start_mpg;
+    source[0].name = "start";
+    source[0].length = start_mpg_len;
+    source[0].periodTicks = start_mpg_period_90k;
+    source[1].data = loop1_mpg;
+    source[1].name = "loop1";
+    source[1].length = loop1_mpg_len;
+    source[1].periodTicks = loop1_mpg_period_90k;
+    source[2].data = loop2_mpg;
+    source[2].name = "loop2";
+    source[2].length = loop2_mpg_len;
+    source[2].periodTicks = loop2_mpg_period_90k;
+    source[3].data = restart_mpg;
+    source[3].name = "restart";
+    source[3].length = restart_mpg_len;
+    source[3].periodTicks = restart_mpg_period_90k;
+    for (i = 0; i < SOURCE_COUNT; i++) {
+        if (init_timestamps(&source[i]) == -1) {
+            printf("MPEG error: cannot initialize source %s\n", source[i].name);
+            return;
+        }
+    }
+    if (SONG_SEQUENCE_SECTOR_COUNT == 0 || SONG_SEQUENCE_REPEAT_START < 0 ||
+        SONG_SEQUENCE_REPEAT_START >= SONG_SEQUENCE_SECTOR_COUNT) {
+        printf("MPEG error: invalid song sequence (count %d repeat %d)\n",
+               SONG_SEQUENCE_SECTOR_COUNT, SONG_SEQUENCE_REPEAT_START);
         return;
     }
-    maPclCount = loopSource[0].pclCount;
+    maPclCount = SONG_SEQUENCE_SECTOR_COUNT;
+    if (maPclCount > MA_PCL_MAX)
+        maPclCount = MA_PCL_MAX;
 
-    mpegDataBuffer = (char *)srqcmem(maPclCount * MPEG_SECTOR_SIZE, SYSRAM);
-    if (mpegDataBuffer == NULL) {
-        printf("Cannot allocate MPEG buffer\n");
-        return;
-    }
-
-    activeLoop = 0;
+    nextSequenceSector = 0;
     timelineTicks = 0;
+    haveLastScr = 0;
+    sequenceStarted = 0;
 
     for (i = 0; i < 16; i++) {
         maCil[i] = NULL;
     }
 
     for (i = 0; i < maPclCount; i++) {
-        load_and_retime_sector(i);
+        load_sector(i);
         init_pcl(&maPcl[i], &maPcl[(i + 1) % maPclCount],
-                 &mpegDataBuffer[i * MPEG_SECTOR_SIZE]);
+                 maPcl[i].PCL_Buf);
     }
 
     currentPcl = 0;
-    streamCycle = 0;
     mpegStatus = MPP_STOP;
 
     devName = csd_devname(DT_MPEGA, 1);
+    if (devName == NULL) {
+        printf("MPEG error: no MPEG audio device name\n");
+        return;
+    }
     maPath = open(devName, 0);
     free(devName);
     if (maPath == -1)
-        printf("Cannot open MPEG audio device\n");
+        printf("MPEG error: cannot open MPEG audio device (errno %d)\n", errno);
 }
 
 void playMpeg() {
     int channel;
 
-    if (maPath == -1 || maPclCount == 0)
+    if (maPath == -1 || maPclCount == 0) {
+        printf("MPEG error: cannot play (path %d, PCL count %d)\n",
+               maPath, maPclCount);
         return;
+    }
 
     channel = MPEG_CHANNEL;
     maMapId = ma_create(maPath, PLAYCD);
-    if (maMapId == -1)
+    if (maMapId == -1) {
+        printf("MPEG error: ma_create failed (errno %d)\n", errno);
         return;
+    }
 
     /* One circular PCL chain is attached to the MPEG audio channel. */
     maCil[channel] = maPcl;
@@ -367,24 +406,22 @@ void playMpeg() {
     maStatus.asy_stat = 0;
     maStatus.asy_sig = MA_SIG_STAT;
 
-    ma_cntrl(maPath, maMapId, 0x00800080, 0L);
-    ma_trigger(maPath, MA_SIG_BASE | 0x1f);
+    CHECK(ma_cntrl(maPath, maMapId, 0x00800080, 0L), "ma_cntrl(play)");
+    CHECK(ma_trigger(maPath, MA_SIG_BASE | 0x1f), "ma_trigger");
 
     service_pcls();
 
-    dump_pcls("start");
-
-    DEBUG(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC,
-                    0));
+    CHECK(ma_cdplay(maPath, maMapId, MV_NO_OFFSET, maPcl, &maStatus, MV_NO_SYNC,
+                    0), "ma_cdplay");
     mpegStatus = MPP_PLAY;
 }
 
 void stopMpeg() {
     if (mpegStatus == MPP_STOP)
         return;
-    ma_abort(maPath);
-    ma_cntrl(maPath, maMapId, 0x80808080, 0L);
-    ma_release(maPath, maMapId);
+    CHECK(ma_abort(maPath), "ma_abort");
+    CHECK(ma_cntrl(maPath, maMapId, 0x80808080, 0L), "ma_cntrl(stop)");
+    CHECK(ma_release(maPath, maMapId), "ma_release");
     mpegStatus = MPP_STOP;
 }
 
@@ -395,7 +432,6 @@ int sigCode;
     } else if ((sigCode & 0xf000) == MA_SIG_BASE) {
         if (sigCode & MA_TRIG_UNF) {
             printf("MPEG audio underflow\n");
-            dump_pcls("underflow");
         }
     } else if (sigCode == MA_SIG_STAT) {
         printf("MPEG audio status %x\n", maStatus.asy_stat);

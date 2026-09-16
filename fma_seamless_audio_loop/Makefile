@@ -54,7 +54,7 @@ $(OUTPUT)/input.r : $(SRC)/input.c $(SRC)/*.h
 $(OUTPUT)/main.r : $(SRC)/main.c $(SRC)/*.h
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/main.c
 
-$(OUTPUT)/mpeg.r : $(SRC)/mpeg.c $(SRC)/*.h $(SRC)/sfx1.c $(SRC)/sfx2.c
+$(OUTPUT)/mpeg.r : $(SRC)/mpeg.c $(SRC)/*.h $(SRC)/sfx_start.c $(SRC)/sfx_restart.c $(SRC)/sfx1.c $(SRC)/sfx2.c $(SRC)/song_sequence.inc
 	$(CC) $(CCFLAGS) -O=2 $(SRC)/mpeg.c
 
 $(OUTPUT)/video.r : $(SRC)/video.c $(SRC)/*.h

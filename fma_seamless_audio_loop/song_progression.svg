@@ -1,0 +1,42 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1220" height="350" viewBox="0 0 1220 350" role="img" aria-labelledby="title desc">
+  <title id="title">MPEG song progression by sector</title>
+  <desc id="desc">Each rectangle is one MPEG sector. Start has one sector, restart ten, loop one appears four times with eleven sectors each, and loop two appears three times with eleven sectors each. Playback repeats at restart.</desc>
+  <defs>
+    <marker id="arrow" markerWidth="10" markerHeight="10" refX="8" refY="5" orient="auto"><path d="M0,0 L10,5 L0,10z" fill="#40536b"/></marker>
+    <rect id="sector" width="10" height="48" rx="2" fill="currentColor"/>
+    <g id="restart-sectors">
+      <use href="#sector" x="0"/><use href="#sector" x="12"/><use href="#sector" x="24"/><use href="#sector" x="36"/><use href="#sector" x="48"/>
+      <use href="#sector" x="60"/><use href="#sector" x="72"/><use href="#sector" x="84"/><use href="#sector" x="96"/><use href="#sector" x="108"/>
+    </g>
+    <g id="loop-sectors">
+      <use href="#sector" x="0"/><use href="#sector" x="12"/><use href="#sector" x="24"/><use href="#sector" x="36"/><use href="#sector" x="48"/><use href="#sector" x="60"/>
+      <use href="#sector" x="72"/><use href="#sector" x="84"/><use href="#sector" x="96"/><use href="#sector" x="108"/><use href="#sector" x="120"/>
+    </g>
+    <style>
+      text { font-family: system-ui, sans-serif; fill: #152238; }
+      .title { font-size: 25px; font-weight: 700; } .subtitle, .detail, .note { font-size: 14px; fill: #52657d; }
+      .label { font-size: 16px; font-weight: 700; } .flow { fill: none; stroke: #40536b; stroke-width: 3; marker-end: url(#arrow); }
+    </style>
+  </defs>
+  <rect width="1220" height="350" fill="#f7f9fc"/>
+  <text x="50" y="43" class="title">Song sequence</text>
+  <text x="50" y="67" class="subtitle">Every rectangle is one 2,304-byte MPEG sector · first pass: 88 sectors · 5 PCL buffers</text>
+
+  <text x="60" y="116" class="label">start</text><text x="60" y="135" class="detail">1</text>
+  <g transform="translate(60 150)" color="#4385c5"><use href="#sector"/></g>
+  <text x="132" y="116" text-anchor="middle" class="label">restart</text><text x="132" y="135" text-anchor="middle" class="detail">10 sectors</text>
+  <g transform="translate(72 150)" color="#3c9970"><use href="#restart-sectors"/></g>
+
+  <text x="269" y="116" text-anchor="middle" class="label">loop1</text><text x="269" y="135" text-anchor="middle" class="detail">11 sectors</text>
+  <text x="401" y="116" text-anchor="middle" class="label">loop1</text><text x="401" y="135" text-anchor="middle" class="detail">11 sectors</text>
+  <text x="533" y="116" text-anchor="middle" class="label">loop1</text><text x="533" y="135" text-anchor="middle" class="detail">11 sectors</text>
+  <text x="665" y="116" text-anchor="middle" class="label">loop1</text><text x="665" y="135" text-anchor="middle" class="detail">11 sectors</text>
+  <g color="#ca8c2b"><use href="#loop-sectors" x="204" y="150"/><use href="#loop-sectors" x="336" y="150"/><use href="#loop-sectors" x="468" y="150"/><use href="#loop-sectors" x="600" y="150"/></g>
+
+  <text x="809" y="116" text-anchor="middle" class="label">loop2</text><text x="809" y="135" text-anchor="middle" class="detail">11 sectors</text>
+  <text x="941" y="116" text-anchor="middle" class="label">loop2</text><text x="941" y="135" text-anchor="middle" class="detail">11 sectors</text>
+  <text x="1073" y="116" text-anchor="middle" class="label">loop2</text><text x="1073" y="135" text-anchor="middle" class="detail">11 sectors</text>
+  <g color="#c45a88"><use href="#loop-sectors" x="744" y="150"/><use href="#loop-sectors" x="876" y="150"/><use href="#loop-sectors" x="1008" y="150"/></g>
+  <path class="flow" d="M1140 175v92H72v-69"/>
+  <text x="606" y="297" text-anchor="middle" class="note">repeat from restart: SONG_SEQUENCE_REPEAT_START = 1</text>
+</svg>
