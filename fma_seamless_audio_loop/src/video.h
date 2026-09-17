@@ -17,4 +17,7 @@ extern u_int fctBuffer[FCT_SIZE];
 extern u_int pixelStart;
 extern u_int lineSkip;
 
+/* Changes Plane B CLUT-7 entry 7 without touching the static label pixels. */
+void videoSetMapLabelFlash();
+
 #endif

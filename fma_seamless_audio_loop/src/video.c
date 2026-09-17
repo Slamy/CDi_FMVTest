@@ -52,6 +52,15 @@ int size;
 #define cl_dgray(i) cp_clut(i, 38, 43, 68)
 #define cl_lgray(i) cp_clut(i, 192, 203, 220)
 #define cl_black(i) cp_clut(i, 0, 0, 0)
+#define cl_navy(i) cp_clut(i, 12, 25, 70)
+#define cl_cyan(i) cp_clut(i, 24, 191, 218)
+#define cl_purple(i) cp_clut(i, 126, 72, 210)
+#define cl_gold(i) cp_clut(i, 250, 184, 48)
+#define cl_gold_fade1(i) cp_clut(i, 184, 132, 34)
+#define cl_gold_fade2(i) cp_clut(i, 104, 74, 18)
+#define cl_gold_fade3(i) cp_clut(i, 48, 34, 8)
+
+#define MAP_LABEL_BUFFER_Y 184
 
 void setupPlaneA()
 {
@@ -77,14 +86,29 @@ void setupPlaneA()
 	fctBuffer[i++] = cl_red(1);
 	fctBuffer[i++] = cl_white(2);
 	fctBuffer[i++] = cl_green(3);
-	
+	fctBuffer[i++] = cl_navy(4);
+	fctBuffer[i++] = cl_cyan(5);
+	fctBuffer[i++] = cl_purple(6);
+	fctBuffer[i++] = cl_gold(7);
+	fctBuffer[i++] = cl_gold_fade1(8);
+	fctBuffer[i++] = cl_gold_fade2(9);
+	fctBuffer[i++] = cl_gold_fade3(10);
+	fctBuffer[i++] = cl_gold(11);
 	fctBuffer[i++] = cp_cbnk(3);
 	fctBuffer[i++] = cl_black(0);
 	fctBuffer[i++] = cl_red(1);
 	fctBuffer[i++] = cl_white(2);
 	fctBuffer[i++] = cl_green(3);
+	fctBuffer[i++] = cl_navy(4);
+	fctBuffer[i++] = cl_cyan(5);
+	fctBuffer[i++] = cl_purple(6);
+	fctBuffer[i++] = cl_gold(7);
+	fctBuffer[i++] = cl_gold_fade1(8);
+	fctBuffer[i++] = cl_gold_fade2(9);
+	fctBuffer[i++] = cl_gold_fade3(10);
+	fctBuffer[i++] = cl_gold(11);
 
-	/* fctBuffer[i++] = cp_sig(); */
+	fctBuffer[i++] = cp_sig();
 
 	dc_wrfct(videoPath, fctA, 0, i, fctBuffer);
 }
@@ -113,14 +137,74 @@ void setupPlaneB()
 	fctBuffer[i++] = cl_red(1);
 	fctBuffer[i++] = cl_white(2);
 	fctBuffer[i++] = cl_green(3);
+	fctBuffer[i++] = cl_navy(4);
+	fctBuffer[i++] = cl_cyan(5);
+	fctBuffer[i++] = cl_purple(6);
+	fctBuffer[i++] = cl_gold(7);
+	fctBuffer[i++] = cl_gold_fade1(8);
+	fctBuffer[i++] = cl_gold_fade2(9);
+	fctBuffer[i++] = cl_gold_fade3(10);
+	fctBuffer[i++] = cl_gold(11);
 
 	fctBuffer[i++] = cp_cbnk(3);
 	fctBuffer[i++] = cl_black(0);
 	fctBuffer[i++] = cl_red(1);
 	fctBuffer[i++] = cl_white(2);
 	fctBuffer[i++] = cl_green(3);
-
+	fctBuffer[i++] = cl_navy(4);
+	fctBuffer[i++] = cl_cyan(5);
+	fctBuffer[i++] = cl_purple(6);
+	fctBuffer[i++] = cl_gold(7);
+	fctBuffer[i++] = cl_gold_fade1(8);
+	fctBuffer[i++] = cl_gold_fade2(9);
+	fctBuffer[i++] = cl_gold_fade3(10);
+	fctBuffer[i++] = cl_gold(11);
 	dc_wrfct(videoPath, fctB, 0, i, fctBuffer);
+}
+
+static void writeMapLabelColor(lct, line, firstBank, red, green, blue)
+int lct;
+int line;
+int firstBank;
+int red, green, blue;
+{
+	u_int commands[4];
+
+	commands[0] = cp_cbnk(firstBank);
+	commands[1] = cp_clut(11, red, green, blue);
+	commands[2] = cp_cbnk(firstBank + 1);
+	commands[3] = cp_clut(11, red, green, blue);
+	/* dc_pwrlct addresses the physical LCT directly and writes all four
+	 * instructions in one call, avoiding dc_wrli's coordinate conversion. */
+	dc_pwrlct(videoPath, lct, line, 1, 1, 4, commands);
+}
+
+void videoSetMapLabelFlash(flash) int flash;
+{
+    int labelLine;
+    int red, green, blue;
+
+	/* dc_pwrlct takes a physical LCT line.  The display address starts
+	 * lineSkip rows into the framebuffer on NTSC. */
+    labelLine = MAP_LABEL_BUFFER_Y - lineSkip;
+
+    if (flash == 0) {
+        red = green = blue = 255;
+    } else if (flash == 1) {
+        red = 255; green = 228; blue = 144;
+    } else if (flash == 2) {
+        red = 255; green = 204; blue = 84;
+    } else {
+        red = 250; green = 184; blue = 48;
+    }
+
+	/* The FCT resets the CLUT each field.  Update entry 11 in every bank
+	 * at the label scan line: Plane A owns banks 0/1 and Plane B owns 2/3.
+	 * This also keeps the pulse independent of the active CLUT-7 bank. */
+	writeMapLabelColor(lctA, labelLine, 0,
+		red, green, blue);
+	writeMapLabelColor(lctB, labelLine, 2,
+		red, green, blue);
 }
 
 void initVideo()

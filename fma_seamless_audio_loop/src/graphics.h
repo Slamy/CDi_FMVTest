@@ -6,5 +6,8 @@
 extern int curIcfA, curIcfB;
 extern unsigned char *paVideo1, *paVideo2;
 
+/* Called before playback, then once per MPEG audio frame-header update. */
+void graphicsStartSong();
+void graphicsAudioUpdate();
 
 #endif
