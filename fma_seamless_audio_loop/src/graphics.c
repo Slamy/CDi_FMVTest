@@ -4,12 +4,11 @@
 #include <ucm.h>
 #include <stdio.h>
 #include <memory.h>
+#include "config.h"
 #include "video.h"
 #include "graphics.h"
 
 /* clang-format on */
-
-u_int frameDone = 0, frameTick = 0;
 
 u_char *paVideo1;
 u_char *paVideo2;
@@ -41,6 +40,13 @@ int curIcfB = ICF_MAX;
 #define MPEG_FRAME_TICKS 2351UL
 #define BEAT_PHASE_TICKS (2UL * MPEG_FRAME_TICKS)
 #define BEAT_PULSE_TICKS (3UL * BEAT_PHASE_TICKS)
+#if USE_FONT8X8_MODULE
+#define FONT8X8_ADVANCE 7 /* The 8-pixel cells already include side bearings. */
+#define FONT8X8_FONTDATA_OFFSET 0x3c
+#define FONT8X8_GLYPH_WIDTH 8
+#define FONT8X8_GLYPH_HEIGHT 8
+#define FONT8X8_NO_GLYPH 0xffff
+#endif
 
 static unsigned long songTicks;
 static int firstPass;
@@ -50,69 +56,71 @@ static int glow2 = -1;
 static int glow3 = -1;
 static int mapLabelPhase = -1;
 
+#if USE_FONT8X8_MODULE
+static FONTDATA *font8x8;
+#else
 typedef struct {
     char character;
     unsigned char row[7];
 } BitmapGlyph;
 
 /* Deliberately tiny built-in alphabet for the static label below. */
-static BitmapGlyph labelGlyphs[] = {
-    {'A', {0x0e, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11}},
-    {'B', {0x1e, 0x11, 0x11, 0x1e, 0x11, 0x11, 0x1e}},
-    {'C', {0x0e, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0e}},
-    {'D', {0x1e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1e}},
-    {'E', {0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x1f}},
-    {'F', {0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x10}},
-    {'G', {0x0e, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0e}},
-    {'H', {0x11, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11}},
-    {'I', {0x0e, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e}},
-    {'K', {0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11}},
-    {'L', {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1f}},
-    {'M', {0x11, 0x1b, 0x15, 0x11, 0x11, 0x11, 0x11}},
-    {'N', {0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11}},
-    {'O', {0x0e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e}},
-    {'P', {0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10, 0x10}},
-    {'R', {0x1e, 0x11, 0x11, 0x1e, 0x14, 0x12, 0x11}},
-    {'S', {0x0f, 0x10, 0x10, 0x0e, 0x01, 0x01, 0x1e}},
-    {'T', {0x1f, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04}}
-    ,{'U', {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e}}
-    ,{'W', {0x11, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0a}}
-    ,{'Y', {0x11, 0x11, 0x0a, 0x04, 0x04, 0x04, 0x04}}
-    ,{'6', {0x0e, 0x10, 0x10, 0x1e, 0x11, 0x11, 0x0e}}
-    ,{'7', {0x1f, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08}}
-    ,{'-', {0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00}}
-    ,{'.', {0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x0c}}
-    ,{'a', {0x00, 0x0e, 0x01, 0x0f, 0x11, 0x11, 0x0f}}
-    ,{'b', {0x10, 0x10, 0x1e, 0x11, 0x11, 0x11, 0x1e}}
-    ,{'c', {0x00, 0x0e, 0x11, 0x10, 0x10, 0x11, 0x0e}}
-    ,{'d', {0x01, 0x01, 0x0f, 0x11, 0x11, 0x11, 0x0f}}
-    ,{'e', {0x00, 0x0e, 0x11, 0x1f, 0x10, 0x11, 0x0e}}
-    ,{'f', {0x06, 0x08, 0x1e, 0x08, 0x08, 0x08, 0x08}}
-    ,{'g', {0x00, 0x0f, 0x11, 0x11, 0x0f, 0x01, 0x0e}}
-    ,{'h', {0x10, 0x10, 0x1e, 0x11, 0x11, 0x11, 0x11}}
-    ,{'i', {0x04, 0x00, 0x0c, 0x04, 0x04, 0x04, 0x0e}}
-    ,{'j', {0x02, 0x00, 0x06, 0x02, 0x02, 0x12, 0x0c}}
-    ,{'k', {0x10, 0x10, 0x12, 0x14, 0x18, 0x14, 0x12}}
-    ,{'l', {0x0c, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e}}
-    ,{'m', {0x00, 0x1a, 0x15, 0x15, 0x11, 0x11, 0x11}}
-    ,{'n', {0x00, 0x1e, 0x11, 0x11, 0x11, 0x11, 0x11}}
-    ,{'o', {0x00, 0x0e, 0x11, 0x11, 0x11, 0x11, 0x0e}}
-    ,{'p', {0x00, 0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10}}
-    ,{'q', {0x00, 0x0f, 0x11, 0x11, 0x0f, 0x01, 0x01}}
-    ,{'r', {0x00, 0x16, 0x19, 0x10, 0x10, 0x10, 0x10}}
-    ,{'s', {0x00, 0x0f, 0x10, 0x0e, 0x01, 0x01, 0x1e}}
-    ,{'t', {0x08, 0x08, 0x1e, 0x08, 0x08, 0x09, 0x06}}
-    ,{'u', {0x00, 0x11, 0x11, 0x11, 0x11, 0x13, 0x0d}}
-    ,{'v', {0x00, 0x11, 0x11, 0x11, 0x0a, 0x0a, 0x04}}
-    ,{'w', {0x00, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0a}}
-    ,{'x', {0x00, 0x11, 0x0a, 0x04, 0x04, 0x0a, 0x11}}
-    ,{'y', {0x00, 0x11, 0x11, 0x0f, 0x01, 0x11, 0x0e}}
-    ,{'z', {0x00, 0x1f, 0x02, 0x04, 0x08, 0x10, 0x1f}}
-};
+static BitmapGlyph labelGlyphs[] = {{'A', {0x0e, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11}},
+                                    {'B', {0x1e, 0x11, 0x11, 0x1e, 0x11, 0x11, 0x1e}},
+                                    {'C', {0x0e, 0x11, 0x10, 0x10, 0x10, 0x11, 0x0e}},
+                                    {'D', {0x1e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x1e}},
+                                    {'E', {0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x1f}},
+                                    {'F', {0x1f, 0x10, 0x10, 0x1e, 0x10, 0x10, 0x10}},
+                                    {'G', {0x0e, 0x11, 0x10, 0x17, 0x11, 0x11, 0x0e}},
+                                    {'H', {0x11, 0x11, 0x11, 0x1f, 0x11, 0x11, 0x11}},
+                                    {'I', {0x0e, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e}},
+                                    {'K', {0x11, 0x12, 0x14, 0x18, 0x14, 0x12, 0x11}},
+                                    {'L', {0x10, 0x10, 0x10, 0x10, 0x10, 0x10, 0x1f}},
+                                    {'M', {0x11, 0x1b, 0x15, 0x11, 0x11, 0x11, 0x11}},
+                                    {'N', {0x11, 0x19, 0x15, 0x13, 0x11, 0x11, 0x11}},
+                                    {'O', {0x0e, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e}},
+                                    {'P', {0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10, 0x10}},
+                                    {'R', {0x1e, 0x11, 0x11, 0x1e, 0x14, 0x12, 0x11}},
+                                    {'S', {0x0f, 0x10, 0x10, 0x0e, 0x01, 0x01, 0x1e}},
+                                    {'T', {0x1f, 0x04, 0x04, 0x04, 0x04, 0x04, 0x04}},
+                                    {'U', {0x11, 0x11, 0x11, 0x11, 0x11, 0x11, 0x0e}},
+                                    {'W', {0x11, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0a}},
+                                    {'Y', {0x11, 0x11, 0x0a, 0x04, 0x04, 0x04, 0x04}},
+                                    {'6', {0x0e, 0x10, 0x10, 0x1e, 0x11, 0x11, 0x0e}},
+                                    {'7', {0x1f, 0x01, 0x02, 0x04, 0x08, 0x08, 0x08}},
+                                    {'-', {0x00, 0x00, 0x00, 0x1f, 0x00, 0x00, 0x00}},
+                                    {'.', {0x00, 0x00, 0x00, 0x00, 0x00, 0x0c, 0x0c}},
+                                    {'a', {0x00, 0x0e, 0x01, 0x0f, 0x11, 0x11, 0x0f}},
+                                    {'b', {0x10, 0x10, 0x1e, 0x11, 0x11, 0x11, 0x1e}},
+                                    {'c', {0x00, 0x0e, 0x11, 0x10, 0x10, 0x11, 0x0e}},
+                                    {'d', {0x01, 0x01, 0x0f, 0x11, 0x11, 0x11, 0x0f}},
+                                    {'e', {0x00, 0x0e, 0x11, 0x1f, 0x10, 0x11, 0x0e}},
+                                    {'f', {0x06, 0x08, 0x1e, 0x08, 0x08, 0x08, 0x08}},
+                                    {'g', {0x00, 0x0f, 0x11, 0x11, 0x0f, 0x01, 0x0e}},
+                                    {'h', {0x10, 0x10, 0x1e, 0x11, 0x11, 0x11, 0x11}},
+                                    {'i', {0x04, 0x00, 0x0c, 0x04, 0x04, 0x04, 0x0e}},
+                                    {'j', {0x02, 0x00, 0x06, 0x02, 0x02, 0x12, 0x0c}},
+                                    {'k', {0x10, 0x10, 0x12, 0x14, 0x18, 0x14, 0x12}},
+                                    {'l', {0x0c, 0x04, 0x04, 0x04, 0x04, 0x04, 0x0e}},
+                                    {'m', {0x00, 0x1a, 0x15, 0x15, 0x11, 0x11, 0x11}},
+                                    {'n', {0x00, 0x1e, 0x11, 0x11, 0x11, 0x11, 0x11}},
+                                    {'o', {0x00, 0x0e, 0x11, 0x11, 0x11, 0x11, 0x0e}},
+                                    {'p', {0x00, 0x1e, 0x11, 0x11, 0x1e, 0x10, 0x10}},
+                                    {'q', {0x00, 0x0f, 0x11, 0x11, 0x0f, 0x01, 0x01}},
+                                    {'r', {0x00, 0x16, 0x19, 0x10, 0x10, 0x10, 0x10}},
+                                    {'s', {0x00, 0x0f, 0x10, 0x0e, 0x01, 0x01, 0x1e}},
+                                    {'t', {0x08, 0x08, 0x1e, 0x08, 0x08, 0x09, 0x06}},
+                                    {'u', {0x00, 0x11, 0x11, 0x11, 0x11, 0x13, 0x0d}},
+                                    {'v', {0x00, 0x11, 0x11, 0x11, 0x0a, 0x0a, 0x04}},
+                                    {'w', {0x00, 0x11, 0x11, 0x15, 0x15, 0x15, 0x0a}},
+                                    {'x', {0x00, 0x11, 0x0a, 0x04, 0x04, 0x0a, 0x11}},
+                                    {'y', {0x00, 0x11, 0x11, 0x0f, 0x01, 0x11, 0x0e}},
+                                    {'z', {0x00, 0x1f, 0x02, 0x04, 0x08, 0x10, 0x1f}}};
 
 #define LABEL_GLYPH_COUNT (sizeof(labelGlyphs) / sizeof(labelGlyphs[0]))
+#endif
 
-void fillBuffer(buffer, data, size) register u_int *buffer;
+static void fillBuffer(buffer, data, size) register u_int *buffer;
 register u_int data, size;
 {
     int i;
@@ -122,7 +130,7 @@ register u_int data, size;
     }
 }
 
-void fillVideoBuffer(videoBuffer, data) register u_int *videoBuffer;
+static void fillVideoBuffer(videoBuffer, data) register u_int *videoBuffer;
 u_int data;
 {
     fillBuffer(videoBuffer, data, VBUFFER_SIZE);
@@ -149,7 +157,9 @@ int x, y, w, h, color;
     }
 }
 
-static BitmapGlyph *findLabelGlyph(character) char character;
+#if !USE_FONT8X8_MODULE
+static BitmapGlyph *findLabelGlyph(character)
+char character;
 {
     int i;
     for (i = 0; i < LABEL_GLYPH_COUNT; i++)
@@ -177,29 +187,78 @@ BitmapGlyph *glyph;
     }
 }
 
+#else
+
+/* FONT8X8 is a 1-bit, 8x8 monospaced UCM font.  Its bitmap is one long
+ * scanline: the per-character offset selects a byte within each scanline. */
+static void drawFont8x8Glyph(fb, x, y, character, color) u_char *fb;
+int x, y, color;
+unsigned char character;
+{
+    register u_char *dst;
+    register u_char bits;
+    unsigned short *offsetTable;
+    unsigned short offset;
+    int row, column;
+
+    if (font8x8 == NULL || character < font8x8->fnt_frstch || character > font8x8->fnt_lastch)
+        return;
+
+    offsetTable = (unsigned short *)((u_char *)font8x8 + font8x8->fnt_offstbl);
+    offset = offsetTable[character - font8x8->fnt_frstch];
+    if (offset == FONT8X8_NO_GLYPH)
+        return;
+
+    for (row = 0; row < FONT8X8_GLYPH_HEIGHT; row++) {
+        dst = fb + (y + row) * SCREEN_WIDTH + x;
+        bits =
+            *((u_char *)font8x8 + font8x8->fnt_map1off + row * font8x8->fnt_lnlen + (offset >> 3));
+        for (column = 0; column < FONT8X8_GLYPH_WIDTH; column++) {
+            if (bits & (0x80 >> column))
+                *dst = color;
+            dst++;
+        }
+    }
+}
+#endif
+
 static void drawLabel(fb, x, y, text, color) u_char *fb;
 int x, y, color;
 char *text;
 {
+#if !USE_FONT8X8_MODULE
     BitmapGlyph *glyph;
+#endif
     char character;
     while (*text) {
         character = *text;
         if (character == ' ')
             x += 4;
+#if USE_FONT8X8_MODULE
+        else {
+            drawFont8x8Glyph(fb, x, y, (unsigned char)character, color);
+            x += FONT8X8_ADVANCE;
+        }
+#else
         else if ((glyph = findLabelGlyph(character)) != NULL) {
             drawLabelGlyph(fb, x, y, glyph, color);
             x += 6;
         }
+#endif
         text++;
     }
 }
 
-static int labelWidth(text) char *text;
+static int labelWidth(text)
+char *text;
 {
     int width = 0;
     while (*text++)
+#if USE_FONT8X8_MODULE
+        width += (text[-1] == ' ') ? 4 : FONT8X8_ADVANCE;
+#else
         width += (text[-1] == ' ') ? 4 : 6;
+#endif
     return width;
 }
 
@@ -293,41 +352,7 @@ static void drawPanel(fb) u_char *fb;
     drawStaticMap(fb);
 }
 
-void draw2x2(unsigned char *fb, int x, int y, int color) {
-    register u_char *dst = fb + y * SCREEN_WIDTH + x;
-    dst[0] = color;
-    dst[1] = color;
-    dst += SCREEN_WIDTH;
-    dst[0] = color;
-    dst[1] = color;
-}
-
-void drawRectangle(unsigned char *fb, int x, int y, int w, int h, int color) {
-    int i;
-
-#if 0
-	/* Horizontal lines */
-	drawLine(fb + y * SCREEN_WIDTH + x, w, color);
-	drawLine(fb + (y + h - 1) * SCREEN_WIDTH + x, w, color);
-
-	/* Vertical lines */
-	for (i = 0; i < h; i++)
-	{
-		fb[(y + i) * SCREEN_WIDTH + x] = color;
-		fb[(y + i) * SCREEN_WIDTH + x + w - 1] = color;
-	}
-#else
-    register u_char *top = fb + y * SCREEN_WIDTH + x;
-    register u_char *bottom = top + h * SCREEN_WIDTH;
-    top[0] = color;
-    top[w] = color;
-    bottom[0] = color;
-    bottom[w] = color;
-#endif
-}
-
-void createVideoBuffers() {
-    int x;
+static void createVideoBuffers() {
 
     paVideo1 = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO1);
     paVideo2 = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO2);
@@ -336,14 +361,6 @@ void createVideoBuffers() {
     fillVideoBuffer(paVideo2, 0);
     /* Plane A is transparent dynamic ink; Plane B contains the static map. */
     drawPanel(paVideo2);
-
-#if 0
-	/* a border with 1 pixel distance around the parrots eye */
-	drawRectangle(paVideo1, (30 + 100) / 2 - 2, (30 + 100) / 2 - 2, 66 + 4, 44 + 4, 2);
-
-	/* small rectangle in the center */
-	drawRectangle(paVideo1, SCREEN_WIDTH / 2 - 1, SCREEN_HEIGHT / 2 - 1, 3, 3, 2);
-#endif
 
     dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paVideo1 + pixelStart));
     dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)paVideo2 + pixelStart));
@@ -357,59 +374,27 @@ void createVideoBuffers() {
     dc_wrli(videoPath, lctB, 2, 7, cp_icf(PB, ICF_MAX));
 }
 
-int readImage(file, videoBuffer)
-int file;
-u_char *videoBuffer;
-{
-    return read(file, videoBuffer, VBUFFER_SIZE);
-}
+#if USE_FONT8X8_MODULE
+static void linkFont8x8() {
+    char *module;
 
-int readScreen(file)
-int file;
-{
-    return readImage(file, paVideo2);
-}
-
-void copyRect(sourceBuffer, targetBuffer, x, y, width, height, sourceWidth) u_char *sourceBuffer,
-    *targetBuffer;
-u_short x, y, width, height, sourceWidth;
-{
-    register u_char *dst = targetBuffer + y * SCREEN_WIDTH + x;
-    register u_char *src = sourceBuffer;
-    register u_short h, w;
-    register u_char tmp;
-
-    for (h = 0; h < height; h++) {
-        for (w = 0; w < width; w++) {
-            tmp = *src++;
-            if (tmp) {
-                *dst = tmp;
-            }
-            dst++;
-        }
-        dst += SCREEN_WIDTH - width;
-        src += sourceWidth - width;
+    /* modlink() returns the execution address (file offset 0x1c).  FONTDATA
+     * begins at offset 0x58 in this module, hence the 0x3c adjustment. */
+    module = (char *)modlink("font8x8", 0);
+    if (module == (char *)-1) {
+        printf("FONT8X8 module unavailable; labels disabled\n");
+        return;
     }
+    font8x8 = (FONTDATA *)(module + FONT8X8_FONTDATA_OFFSET);
 }
+#endif
 
-void clearRect(videoBuffer, x, y, width, height, color) u_char *videoBuffer;
-u_short x, y, width, height;
-u_char color;
-{
-    register u_int value = (color << 24) | (color << 16) | (color << 8) | color;
-    register u_int *dst = (u_int *)(videoBuffer + y * SCREEN_WIDTH + x);
-    register u_short h, w;
-
-    width >>= 2;
-
-    for (h = 0; h < height; h++) {
-        for (w = 0; w < width; w++)
-            *dst++ = value;
-        dst += (SCREEN_WIDTH >> 2) - width;
-    }
+void initGraphics() {
+#if USE_FONT8X8_MODULE
+    linkFont8x8();
+#endif
+    createVideoBuffers();
 }
-
-void initGraphics() { createVideoBuffers(); }
 
 void graphicsStartSong() {
     int playhead;
@@ -428,7 +413,8 @@ void graphicsStartSong() {
     videoSetMapLabelFlash(0);
 }
 
-static int partBeatPhase(partTicks, partLength) unsigned long partTicks;
+static int partBeatPhase(partTicks, partLength)
+unsigned long partTicks;
 unsigned long partLength;
 {
     unsigned long middle = partLength / 2;

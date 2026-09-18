@@ -13,3 +13,14 @@ A lot here was written by ChatGPT to help me with the math of recalculating the 
 The song structure:
 
 ![Song structure](song_progression.svg)
+
+Screenshot from the MiSTer when using the font added to the project:
+
+![Screenshot from MiSTer](pics/compiled_font.png)
+
+Screenshot from the MiSTer when using the ROM internal font:
+
+![Screenshot from MiSTer](pics/font8x8.png)
+
+
+
