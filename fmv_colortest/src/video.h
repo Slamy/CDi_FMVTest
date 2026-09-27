@@ -11,10 +11,14 @@
 #define SCREEN_SIZE (SCREEN_WIDTH * SCREEN_HEIGHT)
 #define VBUFFER_SIZE 108544 /* First full block after SCREEN_WIDTH * SCREEN_HEIGHT */
 
+#define TEST_LEVEL_COUNT 10
+
 extern int videoPath;
 extern int fctA, fctB, lctA, lctB;
 extern u_int fctBuffer[FCT_SIZE];
 extern u_int pixelStart;
 extern u_int lineSkip;
+extern u_char calibratedBaseLevels[TEST_LEVEL_COUNT];
+extern u_char uncalibratedBaseLevels[TEST_LEVEL_COUNT];
 
 #endif

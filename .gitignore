@@ -23,3 +23,9 @@ settings.json
 *.CUE
 *.cue
 *.TOC
+/fmv_colortest/0.png
+/fmv_colortest/1.png
+/fmv_colortest/2.png
+/fmv_colortest/3.png
+/fmv_colortest/out/*.png
+*.zip

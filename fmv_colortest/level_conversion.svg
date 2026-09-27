@@ -1,0 +1,55 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="760" height="520" viewBox="0 0 760 520" role="img" aria-labelledby="title desc">
+  <title id="title">MPEG source level to direct-DVC CLUT calibration</title>
+  <desc id="desc">A graph showing calibrated direct-DVC CLUT values plotted against nominal MPEG source levels, the fitted conversion line, and an identity reference line.</desc>
+  <style>
+    .background { fill: #ffffff; }
+    .grid { fill: none; stroke: #d6d6d6; stroke-width: 1; }
+    .axis { fill: none; stroke: #252525; stroke-width: 2; }
+    .label { fill: #252525; font: 15px sans-serif; }
+    .small { fill: #505050; font: 13px sans-serif; }
+    .fit { fill: none; stroke: #1f77b4; stroke-width: 3; }
+    .identity { fill: none; stroke: #9a9a9a; stroke-width: 2; stroke-dasharray: 7 6; }
+    .point { fill: #d62728; stroke: #ffffff; stroke-width: 1.5; }
+  </style>
+
+  <rect class="background" width="760" height="520"/>
+  <text class="label" x="380" y="30" text-anchor="middle" font-weight="bold">MPEG-to-DVC level calibration</text>
+
+  <!-- Plot area: x=90..680 maps M=0..255; y=440..70 maps D=0..255. -->
+  <g class="grid">
+    <path d="M90 440H680 M90 367.5H680 M90 295H680 M90 222.5H680 M90 150H680 M90 77.5H680"/>
+    <path d="M90 70V440 M237.5 70V440 M385 70V440 M532.5 70V440 M680 70V440"/>
+  </g>
+  <path class="axis" d="M90 70V440H680"/>
+
+  <g class="small" text-anchor="end">
+    <text x="82" y="445">0</text><text x="82" y="372.5">50</text><text x="82" y="300">100</text>
+    <text x="82" y="227.5">150</text><text x="82" y="155">200</text><text x="82" y="82.5">250</text>
+  </g>
+  <g class="small" text-anchor="middle">
+    <text x="90" y="460">0</text><text x="237.5" y="460">64</text><text x="385" y="460">128</text>
+    <text x="532.5" y="460">192</text><text x="680" y="460">255</text>
+  </g>
+  <text class="label" x="385" y="500" text-anchor="middle">Nominal MPEG source level M</text>
+  <text class="label" transform="translate(24 255) rotate(-90)" text-anchor="middle">Direct-DVC CLUT level D</text>
+
+  <!-- D = M and D = 0.8838 M + 18.0753. -->
+  <path class="identity" d="M90 440L680 70"/>
+  <path class="fit" d="M90 413.8L680 86.9"/>
+
+  <!-- Source levels 0,16,32,64,128,192,223,235,239,255 and calibrated D values. -->
+  <g class="point">
+    <circle cx="90" cy="413.9" r="5"/><circle cx="127.0" cy="393.6" r="5"/>
+    <circle cx="164.0" cy="373.3" r="5"/><circle cx="238.1" cy="331.2" r="5"/>
+    <circle cx="386.2" cy="248.5" r="5"/><circle cx="534.4" cy="167.2" r="5"/>
+    <circle cx="606.1" cy="128.2" r="5"/><circle cx="633.9" cy="112.2" r="5"/>
+    <circle cx="643.1" cy="107.9" r="5"/><circle cx="680" cy="87.4" r="5"/>
+  </g>
+
+  <g transform="translate(104 63)">
+    <rect x="0" y="0" width="254" height="62" fill="#ffffff" stroke="#c0c0c0"/>
+    <path class="fit" d="M12 18H45"/><text class="small" x="54" y="23">fit: D = 0.8838 M + 18.0753</text>
+    <path class="identity" d="M12 43H45"/><text class="small" x="54" y="48">identity: D = M</text>
+  </g>
+  <text class="small" x="385" y="486" text-anchor="middle">Red points: measured per-patch values used by the application</text>
+</svg>

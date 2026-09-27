@@ -6,5 +6,7 @@
 extern int curIcfA, curIcfB;
 extern unsigned char *paVideo1, *paVideo2;
 
+void setIcf(icfA, icfB);
+void buildImage(source, target);
 
 #endif

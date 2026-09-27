@@ -1,166 +1,114 @@
+/* clang-format off */
+
 #include <sysio.h>
 #include <ucm.h>
 #include <stdio.h>
 #include <memory.h>
+#include <errno.h>
 #include "video.h"
 #include "graphics.h"
 
-u_int frameDone = 0, frameTick = 0;
+/* clang-format on */
 
-u_char *paVideo1;
-u_char *paVideo2;
+u_char *paCursor;
+u_char *pbBackground;
 
 int curIcfA = ICF_MAX;
 int curIcfB = ICF_MAX;
 
+/*
+ * Direct-DVC levels calibrated against the MPEG output captured from this
+ * CD-i after the grabber was tuned to video black/white. They correspond
+ * respectively to the nominal MPEG source levels 0, 16, 32, 64, 128, 192,
+ * 223, 235, 239, and 255.
+ */
+u_char calibratedBaseLevels[TEST_LEVEL_COUNT] = {18, 32, 46, 75, 132, 188, 215, 226, 229, 243};
+u_char uncalibratedBaseLevels[TEST_LEVEL_COUNT] = {0, 16, 32, 64, 128, 192, 223, 235, 239, 255};
+
 void fillBuffer(buffer, data, size) register u_int *buffer;
 register u_int data, size;
 {
-	int i;
-	size = size >> 2;
-	for (i = 0; i < size; i++)
-	{
-		*buffer++ = data;
-	}
+    int i;
+    size = size >> 2;
+    for (i = 0; i < size; i++) {
+        *buffer++ = data;
+    }
 }
 
 void fillVideoBuffer(videoBuffer, data) register u_int *videoBuffer;
 u_int data;
 {
-	fillBuffer(videoBuffer, data, VBUFFER_SIZE);
+    fillBuffer(videoBuffer, data, VBUFFER_SIZE);
 }
-#define PIXEL_CORD(x, y) ((x) + (y) * SCREEN_WIDTH)
 
-void setPixel(unsigned char *fb, int x, int y, int color)
+void createVideoBuffers() {
+    setIcf(ICF_MIN, ICF_MIN);
+    paCursor = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO1);
+    pbBackground = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO2);
+
+    fillVideoBuffer(pbBackground, 0);
+    buildImage(NULL, paCursor);
+
+    dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paCursor + pixelStart));
+    dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)pbBackground + pixelStart));
+}
+
+void buildImage(source, target) register u_char *source;
+register u_char *target;
 {
-	fb[PIXEL_CORD(x, y)] = color;
+    /*
+     * These are the widths produced by (x * 10) / 384.  Do not calculate
+     * that expression for every pixel: division is particularly expensive
+     * during boot on the 68070.
+     */
+    static u_char barWidths[TEST_LEVEL_COUNT] = {39, 38, 39, 38, 38,
+                                                  39, 38, 39, 38, 38};
+    register u_char *row;
+    register u_int *from;
+    register u_int *to;
+    register int bar, x, y, height;
+
+    /*
+     * The uncalibrated base case (CLUT bank 1) occupies the top third. MPEG
+     * occupies the middle third, and the calibrated base case (bank 0) is below.
+     */
+    row = target;
+    height = SCREEN_HEIGHT / 3;
+    for (bar = 0; bar < TEST_LEVEL_COUNT; bar++)
+        for (x = barWidths[bar]; x; x--)
+            *row++ = 64 + bar;
+
+    /* SCREEN_WIDTH is word aligned: duplicate the scanline using longwords. */
+    from = (u_int *)(row - SCREEN_WIDTH);
+    for (y = 1; y < height; y++) {
+        to = (u_int *)((u_char *)from + SCREEN_WIDTH);
+        for (x = 0; x < SCREEN_WIDTH / sizeof(u_int); x++)
+            *to++ = *from++;
+        from = (u_int *)((u_char *)to - SCREEN_WIDTH / sizeof(u_int) * sizeof(u_int));
+    }
+
+    row = target + (SCREEN_HEIGHT / 3 * 2) * SCREEN_WIDTH;
+    height = SCREEN_HEIGHT - SCREEN_HEIGHT / 3 * 2;
+    for (bar = 0; bar < TEST_LEVEL_COUNT; bar++)
+        for (x = barWidths[bar]; x; x--)
+            *row++ = bar;
+
+    from = (u_int *)(row - SCREEN_WIDTH);
+    for (y = 1; y < height; y++) {
+        to = (u_int *)((u_char *)from + SCREEN_WIDTH);
+        for (x = 0; x < SCREEN_WIDTH / sizeof(u_int); x++)
+            *to++ = *from++;
+        from = (u_int *)((u_char *)to - SCREEN_WIDTH / sizeof(u_int) * sizeof(u_int));
+    }
 }
 
-void draw2x2(unsigned char *fb, int x, int y, int color)
+void setIcf(icfA, icfB) register int icfA, icfB;
 {
-	setPixel(fb, x, y, color);
-	setPixel(fb, x + 1, y, color);
-	setPixel(fb, x, y + 1, color);
-	setPixel(fb, x + 1, y + 1, color);
+    curIcfA = icfA > ICF_MAX ? ICF_MAX : (icfA < ICF_MIN ? ICF_MIN : icfA);
+    curIcfB = icfB > ICF_MAX ? ICF_MAX : (icfB < ICF_MIN ? ICF_MIN : icfB);
+
+    dc_wrli(videoPath, lctA, 0, 7, cp_icf(PA, curIcfA));
+    dc_wrli(videoPath, lctB, 0, 7, cp_icf(PB, curIcfB));
 }
 
-void drawRectangle(unsigned char *fb, int x, int y, int w, int h, int color)
-{
-	int i, j;
-
-#if 0
-	/* Horizontal lines */
-	for (i = x; i < x + w; i++)
-	{
-		setPixel(fb, i, y, color);
-		setPixel(fb, i, y + h - 1, color);
-	}
-
-	/* Vertical lines */
-	for (i = y; i < y + h; i++)
-	{
-		setPixel(fb, x, i, color);
-		setPixel(fb, x + w - 1, i, color);
-	}
-#else
-	setPixel(fb, x, y, color);
-	setPixel(fb, x + w, y, color);
-	setPixel(fb, x, y + h, color);
-	setPixel(fb, x + w, y + h, color);
-#endif
-}
-
-void createVideoBuffers()
-{
-	int x;
-
-	paVideo1 = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO1);
-	paVideo2 = (u_char *)srqcmem(VBUFFER_SIZE, VIDEO2);
-
-	fillVideoBuffer(paVideo1, 0);
-	fillVideoBuffer(paVideo2, 0);
-
-#if 0
-	/* a border with 1 pixel distance around the parrots eye */
-	drawRectangle(paVideo1, (30 + 100) / 2 - 2, (30 + 100) / 2 - 2, 66 + 4, 44 + 4, 2);
-
-	/* small rectangle in the center */
-	drawRectangle(paVideo1, SCREEN_WIDTH / 2 - 1, SCREEN_HEIGHT / 2 - 1, 3, 3, 2);
-#endif
-
-	dc_wrli(videoPath, lctA, 0, 0, cp_dadr((int)paVideo1 + pixelStart));
-	dc_wrli(videoPath, lctB, 0, 0, cp_dadr((int)paVideo2 + pixelStart));
-
-	dc_wrli(videoPath, lctA, 0, 7, cp_icf(PA, ICF_MAX));
-	dc_wrli(videoPath, lctB, 0, 7, cp_icf(PB, ICF_MAX));
-
-	/* Valid starting with second line */
-	dc_wrli(videoPath, lctA, 2, 6, cp_icm(ICM_CLUT7, ICM_CLUT7, NM_1, EV_ON, CS_A));
-	dc_wrli(videoPath, lctA, 2, 7, cp_icf(PA, ICF_MAX));
-	dc_wrli(videoPath, lctB, 2, 7, cp_icf(PB, ICF_MAX));
-
-	/* dc_wrli(videoPath, lctB, 261*2, 7, cp_sig()); */
-}
-
-int readImage(file, videoBuffer)
-int file;
-u_char *videoBuffer;
-{
-	return read(file, videoBuffer, VBUFFER_SIZE);
-}
-
-int readScreen(file)
-int file;
-{
-	return readImage(file, paVideo2);
-}
-
-void copyRect(sourceBuffer, targetBuffer, x, y, width, height, sourceWidth)
-	u_char *sourceBuffer,
-	*targetBuffer;
-u_short x, y, width, height, sourceWidth;
-{
-	register u_char *dst = targetBuffer + y * SCREEN_WIDTH + x;
-	register u_char *src = sourceBuffer;
-	register u_short h, w;
-	register u_char tmp;
-
-	for (h = 0; h < height; h++)
-	{
-		for (w = 0; w < width; w++)
-		{
-			tmp = *src++;
-			if (tmp)
-			{
-				*dst = tmp;
-			}
-			dst++;
-		}
-		dst += SCREEN_WIDTH - width;
-		src += sourceWidth - width;
-	}
-}
-
-void clearRect(videoBuffer, x, y, width, height, color)
-	u_char *videoBuffer;
-u_short x, y, width, height;
-u_char color;
-{
-	register u_int value = (color << 24) | (color << 16) | (color << 8) | color;
-	register u_int *dst = (u_int *)(videoBuffer + y * SCREEN_WIDTH + x);
-	register u_short h, w;
-
-	width >>= 2;
-
-	for (h = 0; h < height; h++)
-	{
-		for (w = 0; w < width; w++)
-			*dst++ = value;
-		dst += (SCREEN_WIDTH >> 2) - width;
-	}
-}
-
-void initGraphics()
-{
-	createVideoBuffers();
-}
+void initGraphics() { createVideoBuffers(); }
