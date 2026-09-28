@@ -12,8 +12,9 @@ Run `python3 generate_reference_png.py` to create `reference.png`, then execute
 grayscale bars (0, 16, 32, 64, 128, 192, 223, 235, 239, and 255).
 The uncalibrated base case uses those original values, while
 the calibrated base case uses calibrated values (18, 32, 46, 75, 132, 188,
-215, 226, 229, and 243) so its bars match the captured MPEG output. The
-generator creates a 384x240 image, matching the existing MPEG input.
+215, 226, 229, and 243) so its bars match the captured MPEG output if it was
+encoded using the `tv` color space. If the color space was `pc` then the raw colors will match.
+The generator creates a 384x240 image, matching the existing MPEG input.
 
 For my tuned USB grabber, the calibration from nominal MPEG source level `M`
 to direct-DVC CLUT level `D` is approximately `D = 0.8838 * M + 18.0753`, rounded
