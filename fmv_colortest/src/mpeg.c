@@ -63,7 +63,7 @@ void playMpeg() {
     DEBUG(mv_selstrm(mvPath, mvMapId, 0, 768, 560, 25));
     DEBUG(mv_borcol(mvPath, mvMapId, 0, 0, 0));
     DEBUG(mv_org(mvPath, mvMapId, 0, 0));
-    DEBUG(mv_pos(mvPath, mvMapId, 0, 0, 0));
+    DEBUG(mv_pos(mvPath, mvMapId, -100, 200, 0));
     DEBUG(mv_window(mvPath, mvMapId, 0, 0, 768, 560, 0));
     DEBUG(mv_show(mvPath, 0));
 
