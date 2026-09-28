@@ -14,10 +14,6 @@ u_int fctBuffer[FCT_SIZE];
 u_int lineSkip;
 u_int pixelStart;
 
-/* Raw CLUT values for the ten Plane A test bars. */
-static u_char rawBarLevels[TEST_LEVEL_COUNT] = {0, 16, 32, 64, 128,
-                                                 192, 223, 235, 239, 255};
-
 int initFCT(plane, size)
 int plane;
 int size;
@@ -44,7 +40,7 @@ void setupPlaneA() {
     dc_flnk(videoPath, fctA, lctA, 0);
 
     fctBuffer[i++] =
-        cp_icm(ICM_CLUT7, ICM_CLUT7, NM_1, EV_ON, CS_A); /* Use CLUT7 for plane A and B, 1 Matte, External Video Off */
+        cp_icm(ICM_DYUV, ICM_CLUT7, NM_1, EV_ON, CS_A); /* Use DYUV for Plane A and CLUT7 for Plane B, 1 Matte, External Video Off */
     /* The LCT changes this at the two band boundaries. Start with A only. */
     fctBuffer[i++] = cp_tci(MIX_OFF, TR_OFF, TR_ON);
     fctBuffer[i++] = cp_po(PR_AB);                       /* Plane A in front of B */
@@ -56,13 +52,6 @@ void setupPlaneA() {
     fctBuffer[i++] = cp_icf(PA, ICF_MIN);                /* Min Image Contributing Factor */
     fctBuffer[i++] = cp_matte(0, MO_END, MF_MF0, ICF_MAX, 0);
     fctBuffer[i++] = cp_dprm(RMS_NORMAL, PRF_X2, BP_NORMAL); /* Reload Display Parameters */
-
-    fctBuffer[i++] = cp_cbnk(0);
-
-    for (j = 0; j < 64; j++) {
-        u_char level = j < TEST_LEVEL_COUNT ? rawBarLevels[j] : j;
-        fctBuffer[i++] = cp_clut(j, level, level, level);
-    }
 
     dc_wrfct(videoPath, fctA, 0, i, fctBuffer);
 }

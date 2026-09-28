@@ -3,8 +3,10 @@
 This is a base case experiment to show the effect of mixing vs not mixing.
 There is no MPEG functionality involved here.
 
-Plane A fills the screen with ten raw grayscale bars
-(0, 16, 32, 64, 128, 192, 223, 235, 239, and 255). Plane B is split into the
+Plane A is configured as DYUV and fills the screen with ten neutral-chroma
+grayscale bars, targeting luma values 0, 16, 32, 64, 128, 192, 223, 235, 239,
+and 255. (The closest representable DYUV delta is used at each bar edge.)
+Plane B is split into the
 same ten bar-width regions, each containing three equal-width sub-bars at
 literal CLUT levels 0, 16, and 32.
 
