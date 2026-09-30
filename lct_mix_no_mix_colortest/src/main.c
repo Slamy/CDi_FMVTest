@@ -38,9 +38,9 @@ void initProgram() {
 
     /* LCT changes: Plane A only, Plane B only, then both planes mixed. */
     dc_wrli(videoPath, lctA, SCREEN_HEIGHT * 2 / 3, 0, cp_tci(MIX_OFF, TR_ON, TR_ON));
-    dc_wrli(videoPath, lctA, SCREEN_HEIGHT * 2 / 3 * 2, 1, cp_icm(ICM_CLUT7, ICM_CLUT7, NM_1, EV_OFF, CS_A));
+    dc_wrli(videoPath, lctA, SCREEN_HEIGHT * 2 / 3 * 2, 1, cp_icm(ICM_OFF, ICM_OFF, NM_1, EV_OFF, CS_A));
 
-    dc_wrli(videoPath, lctA, SCREEN_HEIGHT * 2 / 3 * 2, 0, cp_icm(ICM_CLUT7, ICM_CLUT7, NM_1, EV_OFF, CS_A));
+    dc_wrli(videoPath, lctA, SCREEN_HEIGHT * 2 / 3 * 2, 0, cp_icm(ICM_OFF, ICM_OFF, NM_1, EV_OFF, CS_A));
 
     dc_wrli(videoPath, lctA, SCREEN_HEIGHT * 2 / 3 * 2 + 16 * 1, 0, cp_bkcol(BK_LOW, BK_WHITE));
     dc_wrli(videoPath, lctA, SCREEN_HEIGHT * 2 / 3 * 2 + 16 * 2, 0, cp_bkcol(BK_HIGH, BK_WHITE));
