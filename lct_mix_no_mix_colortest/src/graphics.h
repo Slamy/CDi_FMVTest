@@ -3,10 +3,8 @@
 
 #include "video.h"
 
-extern int curIcfA, curIcfB;
-extern unsigned char *paVideo1, *paVideo2;
+extern int curIcfA;
 
-void setIcf(icfA, icfB);
-void buildImage(source, target);
+void setIcf(icfA);
 
 #endif

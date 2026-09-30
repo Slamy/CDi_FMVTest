@@ -14,7 +14,7 @@
 #define TEST_LEVEL_COUNT 10
 
 extern int videoPath;
-extern int fctA, fctB, lctA, lctB;
+extern int fctA, lctA;
 extern u_int fctBuffer[FCT_SIZE];
 extern u_int pixelStart;
 extern u_int lineSkip;

@@ -9,7 +9,7 @@
 /* clang-format on */
 
 int videoPath;
-int fctA, fctB, lctA, lctB;
+int fctA, lctA;
 u_int fctBuffer[FCT_SIZE];
 u_int lineSkip;
 u_int pixelStart;
@@ -33,17 +33,14 @@ int size;
 
 void setupPlaneA() {
     int i = 0;
-    int j = 0;
-
     fctA = initFCT(PA, FCT_SIZE);
     lctA = initLCT(PA, LCT_SIZE);
     dc_flnk(videoPath, fctA, lctA, 0);
 
-    fctBuffer[i++] =
-        cp_icm(ICM_DYUV, ICM_CLUT7, NM_1, EV_ON, CS_A); /* Use DYUV for Plane A and CLUT7 for Plane B, 1 Matte, External Video Off */
-    /* The LCT changes this at the two band boundaries. Start with A only. */
+    fctBuffer[i++] = cp_icm(ICM_DYUV, ICM_OFF, NM_1, EV_ON, CS_A);
+    /* Plane A is visible and spans the entire display. */
     fctBuffer[i++] = cp_tci(MIX_OFF, TR_OFF, TR_ON);
-    fctBuffer[i++] = cp_po(PR_AB);                       /* Plane A in front of B */
+    fctBuffer[i++] = cp_po(PR_AB);
     fctBuffer[i++] = cp_bkcol(BK_BLACK, BK_LOW);         /* Backdrop Low Intensity Black */
     fctBuffer[i++] = cp_tcol(PA, 0, 0, 0);               /* Set transparancy color to black: rgb(0,0,0) */
     fctBuffer[i++] = cp_mcol(PA, 0, 0, 0);               /* Set mask color to black: rgb(0,0,0) */
@@ -54,34 +51,6 @@ void setupPlaneA() {
     fctBuffer[i++] = cp_dprm(RMS_NORMAL, PRF_X2, BP_NORMAL); /* Reload Display Parameters */
 
     dc_wrfct(videoPath, fctA, 0, i, fctBuffer);
-}
-
-void setupPlaneB() {
-    int i = 0;
-    int j;
-
-    fctB = initFCT(PB, FCT_SIZE);
-    lctB = initLCT(PB, LCT_SIZE);
-    dc_flnk(videoPath, fctB, lctB, 0);
-
-    fctBuffer[i++] = cp_nop();
-    fctBuffer[i++] = cp_nop();
-    fctBuffer[i++] = cp_nop();
-    fctBuffer[i++] = cp_nop();
-    fctBuffer[i++] = cp_tcol(PB, 0, 0, 0);     /* Set transparancy color to black: rgb(0,0,0) */
-    fctBuffer[i++] = cp_mcol(PB, 0, 0, 0);     /* Set mask color to black: rgb(0,0,0) */
-    fctBuffer[i++] = cp_yuv(PB, 16, 128, 128); /* Set DYUV start value */
-    fctBuffer[i++] = cp_phld(PB, PH_OFF, 1);   /* Set Mosaic (pixel_hold) off, size = 1 */
-    fctBuffer[i++] = cp_icf(PB, ICF_MAX);      /* Full contribution in the mixed band */
-    fctBuffer[i++] = cp_nop();
-    fctBuffer[i++] = cp_dprm(RMS_NORMAL, PRF_X2, BP_NORMAL); /* Reload Display Parameters */
-
-    /* Plane B needs literal 0, 16, and 32 CLUT values, independently of A. */
-    fctBuffer[i++] = cp_cbnk(0);
-    for (j = 0; j < 64; j++)
-        fctBuffer[i++] = cp_clut(j, j, j, j);
-
-    dc_wrfct(videoPath, fctB, 0, i, fctBuffer);
 }
 
 void initVideo() {
@@ -121,14 +90,11 @@ void initVideo() {
     gc_hide(videoPath); /* Hide the Graphics Cursor */
 
     setupPlaneA();
-    setupPlaneB();
-    dc_exec(videoPath, fctA, fctB);
+    dc_exec(videoPath, fctA, 0);
 }
 
 void closeVideo() {
     dc_dllct(videoPath, lctA);
-    dc_dllct(videoPath, lctB);
     dc_dlfct(videoPath, fctA);
-    dc_dlfct(videoPath, fctB);
     close(videoPath); /* Close Video Device */
 }
